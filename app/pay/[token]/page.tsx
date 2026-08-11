@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Alert, Btn, IconBox, PhotoBox, Spinner } from "@/components/ui";
 import { api, ApiError, fileUrl, rupiah } from "@/lib/api";
+import { isValidUploadSize, MAX_UPLOAD_MB } from "@/lib/validation";
 import type { PayPageData } from "@/lib/types";
 
 export default function PayPage() {
@@ -140,13 +141,22 @@ export default function PayPage() {
                   {file ? file.name : "Upload Proof of Payment"}
                 </span>
                 <span className="text-[10px] text-[#AAAAAA]">
-                  JPG, PNG or PDF · Max 5 MB
+                  JPG, PNG or PDF · Max {MAX_UPLOAD_MB} MB
                 </span>
                 <input
                   type="file"
                   accept="image/*,application/pdf"
                   className="hidden"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    if (f && !isValidUploadSize(f)) {
+                      setErr(`File must be ${MAX_UPLOAD_MB} MB or smaller.`);
+                      setFile(null);
+                      return;
+                    }
+                    setErr("");
+                    setFile(f);
+                  }}
                 />
               </label>
               {err && <Alert>{err}</Alert>}

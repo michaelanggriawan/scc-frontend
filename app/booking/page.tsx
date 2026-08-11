@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { NavBar, Footer, FloatingWA } from "@/components/site";
 import {
   Alert,
@@ -14,10 +15,67 @@ import {
 } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import {
+  blockNonDigitKeys,
+  blockNonDigitPaste,
+  isValidEmail,
+  isValidPhone,
+  minBookingDate,
+} from "@/lib/validation";
 import type { AddOn, Room } from "@/lib/types";
+
+const MIN_DATE = minBookingDate();
+const DRAFT_KEY = "scc_booking_draft";
+
+type Draft = {
+  category: string;
+  roomId: string;
+  addonIds: string[];
+  date: string;
+  time: string;
+  duration: string;
+  notes: string;
+  name: string;
+  email: string;
+  phone: string;
+};
+
+function loadDraft(): Draft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(DRAFT_KEY);
+    return raw ? (JSON.parse(raw) as Draft) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(draft: Draft) {
+  try {
+    window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    // ignore storage failures (e.g. private browsing quota)
+  }
+}
+
+function clearDraft() {
+  try {
+    window.localStorage.removeItem(DRAFT_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+type FieldErrors = Partial<
+  Record<
+    "category" | "room" | "date" | "time" | "duration" | "name" | "email" | "phone",
+    string
+  >
+>;
 
 export default function BookingPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [addons, setAddons] = useState<AddOn[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -36,7 +94,26 @@ export default function BookingPage() {
 
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const [successRef, setSuccessRef] = useState("");
+
+  // Restore a draft saved before an unauthenticated user was sent to sign up.
+  // Declared before the data-fetch effect below so it commits first and the
+  // room-preselect logic there can see the restored roomId.
+  useEffect(() => {
+    const draft = loadDraft();
+    if (!draft) return;
+    setCategory(draft.category ?? "");
+    setRoomId(draft.roomId ?? "");
+    setAddonIds(draft.addonIds ?? []);
+    setDate(draft.date ?? "");
+    setTime(draft.time ?? "");
+    setDuration(draft.duration ?? "");
+    setNotes(draft.notes ?? "");
+    setName(draft.name ?? "");
+    setEmail(draft.email ?? "");
+    setPhone(draft.phone ?? "");
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -48,19 +125,23 @@ export default function BookingPage() {
         setRooms(r);
         setAddons(a);
         setCategories(c);
-        const url = new URLSearchParams(window.location.search);
-        const pre = url.get("room");
-        if (pre && r.some((room) => room.id === pre)) setRoomId(pre);
-        else if (r[0]) setRoomId(r[0].id);
+        setRoomId((current) => {
+          if (current && r.some((room) => room.id === current)) return current;
+          const url = new URLSearchParams(window.location.search);
+          const pre = url.get("room");
+          if (pre && r.some((room) => room.id === pre)) return pre;
+          return r[0]?.id ?? "";
+        });
       })
       .finally(() => setLoaded(true));
   }, []);
 
+  // Only fills in blanks — won't clobber a restored draft's contact info.
   useEffect(() => {
     if (user) {
-      setName(user.fullName);
-      setEmail(user.email);
-      setPhone(user.phone);
+      setName((v) => v || user.fullName);
+      setEmail((v) => v || user.email);
+      setPhone((v) => v || user.phone);
     }
   }, [user]);
 
@@ -70,41 +151,58 @@ export default function BookingPage() {
     );
   }
 
+  // Everything is required except Notes. Shared by the disabled-submit state
+  // and the submit handler itself, so both agree on what's valid.
+  function getFieldErrors(): FieldErrors {
+    const errs: FieldErrors = {};
+    if (!category) errs.category = "Please select an event category.";
+    if (!roomId) errs.room = "Please select a room.";
+    if (!date) errs.date = "Please choose an event date.";
+    else if (date < MIN_DATE) errs.date = "Event date must be at least 7 days from today.";
+    if (!time) errs.time = "Please choose a start time.";
+    const durationNum = Number(duration);
+    if (!duration.trim() || !Number.isInteger(durationNum) || durationNum < 1) {
+      errs.duration = "Duration must be a whole number of at least 1.";
+    }
+    if (!name.trim()) errs.name = "Please provide your full name.";
+    if (!email.trim() || !isValidEmail(email)) {
+      errs.email = "Please provide a valid email address.";
+    }
+    if (!phone.trim() || !isValidPhone(phone)) {
+      errs.phone = "Please provide a valid phone number.";
+    }
+    return errs;
+  }
+  const fieldErrors = getFieldErrors();
+  const showErrors = (field: keyof FieldErrors) =>
+    submitAttempted ? fieldErrors[field] : undefined;
+
   async function submit() {
     setError("");
-    // Everything is required except Notes.
-    if (!category) {
-      setError("Please select an event category.");
+    setSubmitAttempted(true);
+    if (Object.keys(fieldErrors).length > 0) return;
+
+    const draft: Draft = {
+      category,
+      roomId,
+      addonIds,
+      date,
+      time,
+      duration,
+      notes,
+      name,
+      email,
+      phone,
+    };
+
+    // Require an account before an inquiry is actually created — save the
+    // filled-in form so it's restored after they sign up.
+    if (!user) {
+      saveDraft(draft);
+      router.push("/register?next=/booking");
       return;
     }
-    if (!roomId) {
-      setError("Please select a room.");
-      return;
-    }
-    if (!date) {
-      setError("Please choose an event date.");
-      return;
-    }
-    if (!time) {
-      setError("Please choose a start time.");
-      return;
-    }
-    if (!duration.trim()) {
-      setError("Please enter the event duration.");
-      return;
-    }
-    if (!name.trim()) {
-      setError("Please provide your full name.");
-      return;
-    }
-    if (!email.trim()) {
-      setError("Please provide your email.");
-      return;
-    }
-    if (!phone.trim()) {
-      setError("Please provide your phone number.");
-      return;
-    }
+
     setSubmitting(true);
     try {
       const body = {
@@ -119,9 +217,8 @@ export default function BookingPage() {
         category,
         notes,
       };
-      // Logged-in customers get their inquiry linked to their account.
-      const path = user ? "/inquiries" : "/public/inquiries";
-      const res = await api.post<{ ref: string }>(path, body);
+      const res = await api.post<{ ref: string }>("/inquiries", body);
+      clearDraft();
       setSuccessRef(res.ref);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Something went wrong.");
@@ -145,15 +242,9 @@ export default function BookingPage() {
             will contact you via WhatsApp to discuss pricing and availability.
           </p>
           <div className="flex gap-3 justify-center mt-2">
-            {user ? (
-              <Link href="/profile">
-                <Btn>Track in My Bookings</Btn>
-              </Link>
-            ) : (
-              <Link href="/login">
-                <Btn>Log in to track it</Btn>
-              </Link>
-            )}
+            <Link href="/profile">
+              <Btn>Track in My Bookings</Btn>
+            </Link>
             <Link href="/">
               <button className="border border-[#222] bg-white text-[#222] font-semibold px-6 py-3 text-sm cursor-pointer">
                 Back Home
@@ -206,6 +297,9 @@ export default function BookingPage() {
                     </button>
                   ))}
                 </div>
+                {showErrors("category") && (
+                  <p className="text-xs text-[#c33] mt-2">{fieldErrors.category}</p>
+                )}
               </div>
 
               {/* Room */}
@@ -244,6 +338,9 @@ export default function BookingPage() {
                     </button>
                   ))}
                 </div>
+                {showErrors("room") && (
+                  <p className="text-xs text-[#c33] mt-2">{fieldErrors.room}</p>
+                )}
               </div>
 
               {/* Date/time */}
@@ -255,20 +352,32 @@ export default function BookingPage() {
                   <TextField
                     label="Date"
                     type="date"
+                    min={MIN_DATE}
+                    required
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
+                    error={showErrors("date")}
                   />
                   <TextField
                     label="Start Time"
                     type="time"
+                    required
                     value={time}
                     onChange={(e) => setTime(e.target.value)}
+                    error={showErrors("time")}
                   />
                   <TextField
-                    label="Duration"
-                    placeholder="e.g. 8 hours"
+                    label="Duration (hours)"
+                    type="number"
+                    min={1}
+                    step={1}
+                    required
+                    placeholder="e.g. 8"
                     value={duration}
                     onChange={(e) => setDuration(e.target.value)}
+                    onKeyDown={blockNonDigitKeys}
+                    onPaste={blockNonDigitPaste}
+                    error={showErrors("duration")}
                   />
                 </div>
               </div>
@@ -313,19 +422,29 @@ export default function BookingPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                   <TextField
                     label="Full Name"
+                    placeholder="e.g. Jane Doe"
+                    required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    error={showErrors("name")}
                   />
                   <TextField
                     label="Email"
                     type="email"
+                    placeholder="e.g. jane@email.com"
+                    required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    error={showErrors("email")}
                   />
                   <TextField
                     label="Phone"
+                    type="tel"
+                    placeholder="e.g. 0812 3456 7890"
+                    required
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
+                    error={showErrors("phone")}
                   />
                 </div>
                 <TextArea
@@ -366,6 +485,12 @@ export default function BookingPage() {
           <Btn full disabled={submitting} onClick={submit}>
             {submitting ? "Submitting…" : "Submit Inquiry"}
           </Btn>
+          {!user && (
+            <p className="text-[10px] text-[#AAAAAA] text-center leading-relaxed">
+              You&apos;ll be asked to sign in or create an account to submit —
+              your form details will be kept.
+            </p>
+          )}
           <p className="text-[10px] text-[#888] text-center leading-relaxed">
             Our team will contact you via WhatsApp to discuss pricing and
             availability.
