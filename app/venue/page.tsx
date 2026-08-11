@@ -7,6 +7,13 @@ import { Btn, IconBox, PhotoBox, SLabel, Spinner } from "@/components/ui";
 import { api } from "@/lib/api";
 import type { Room } from "@/lib/types";
 
+const VENUE_FACTS = [
+  ["Floor Dimension", "42m × 24m — pillar-free convention space"],
+  ["Clear Height", "8 meters — ideal for high stage rigging and lighting"],
+  ["Power Capacity", "Large-scale integrated power system, ready for concerts & multimedia"],
+  ["Loading Access", "Direct loading dock access for fast crew and vendor mobilization"],
+];
+
 export default function VenuePage() {
   const [rooms, setRooms] = useState<Room[] | null>(null);
 
@@ -22,15 +29,38 @@ export default function VenuePage() {
       <section className="relative">
         <PhotoBox label="[ Venue Hero Photo ]" className="w-full h-[340px]" />
         <div className="absolute inset-0 bg-black/30 flex flex-col justify-end pb-10 px-6 md:px-16">
-          <p className="text-xs font-semibold uppercase tracking-widest text-white/70 mb-2">
-            SCC Venue
-          </p>
-          <h1 className="text-3xl font-bold text-white">Our Rooms & Specs</h1>
-          <p className="text-sm text-white/80 mt-1">
-            Production-ready spaces with full technical fit-out.
-          </p>
+          <div className="max-w-screen-xl mx-auto w-full">
+            <p className="text-xs font-semibold uppercase tracking-widest text-white/70 mb-2">
+              SCC Venue
+            </p>
+            <h1 className="text-3xl font-bold text-white">Our Rooms & Specs</h1>
+            <p className="text-sm text-white/80 mt-1">
+              Production-ready spaces with full technical fit-out.
+            </p>
+          </div>
         </div>
       </section>
+
+      <div className="bg-white border-b border-[#D1D1D1] px-6 md:px-16 py-10">
+        <div className="max-w-screen-xl mx-auto">
+          <SLabel>Grand Venue Info</SLabel>
+          <h2 className="text-xl font-bold text-[#222] mb-6">
+            Facility Specifications
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            {VENUE_FACTS.map(([label, desc]) => (
+              <div key={label} className="border border-[#D1D1D1] p-4 flex flex-col gap-1">
+                <p className="text-xs font-bold text-[#222]">{label}</p>
+                <p className="text-xs text-[#777] leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-sm text-[#555]">
+            Special rate: starting from{" "}
+            <span className="font-bold text-[#222]">Rp 20,000,000</span>
+          </p>
+        </div>
+      </div>
 
       <div className="max-w-screen-xl mx-auto px-6 md:px-16 py-12 flex flex-col gap-16">
         {rooms === null ? (
