@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -11,6 +11,14 @@ import { ApiError } from "@/lib/api";
 import { isValidEmail, isValidPhone, validatePassword } from "@/lib/validation";
 
 export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterForm />
+    </Suspense>
+  );
+}
+
+function RegisterForm() {
   const { register } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
