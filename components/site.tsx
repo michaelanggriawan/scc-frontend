@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -70,18 +71,50 @@ export function NavBar() {
   );
 }
 
+const WA_DEFAULT_MESSAGE =
+  'Halo, saya ingin tanya soal Serpong Convention Center.';
+
+// Normalizes a local/intl-formatted phone number into the digits-only,
+// country-code-prefixed form wa.me expects (e.g. "0811..." -> "62811...").
+function toWaNumber(raw: string): string {
+  const digits = raw.replace(/\D/g, '');
+  return digits.startsWith('0') ? `62${digits.slice(1)}` : digits;
+}
+
 export function FloatingWA() {
+  const [venue, setVenue] = useState<VenueInfo | null>(null);
+  useEffect(() => {
+    api.get<VenueInfo>('/public/venue-info').then(setVenue).catch(() => {});
+  }, []);
+
+  const phone = venue?.whatsapp ? toWaNumber(venue.whatsapp) : '';
+  const href = phone
+    ? `https://wa.me/${phone}?text=${encodeURIComponent(WA_DEFAULT_MESSAGE)}`
+    : undefined;
+
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-disabled={!href}
+      className={`fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2 ${
+        href ? '' : 'pointer-events-none opacity-50'
+      }`}
+    >
       <div className="bg-white border border-[#D1D1D1] px-3 py-1.5 text-xs text-[#555] shadow-sm">
         Chat with us on WhatsApp
       </div>
-      <div className="w-12 h-12 bg-[#25D366] flex items-center justify-center cursor-pointer">
-        <span className="text-white text-[10px] font-bold text-center leading-tight">
-          WA
-        </span>
+      <div className="w-14 h-14 cursor-pointer">
+        <Image
+          src="/WhatsApp.webp"
+          alt="Chat with us on WhatsApp"
+          width={56}
+          height={56}
+          className="w-full h-full object-contain"
+        />
       </div>
-    </div>
+    </a>
   );
 }
 
