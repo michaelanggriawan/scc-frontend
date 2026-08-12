@@ -9,15 +9,6 @@ import { Alert, Btn, Icon, TextField } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { ApiError } from "@/lib/api";
 
-export default function LoginPage() {
-  return (
-    <Suspense>
-      <LoginForm />
-    </Suspense>
-  );
-}
-
-function LoginForm() {
 function LoginContent() {
   const { login } = useAuth();
   const router = useRouter();
