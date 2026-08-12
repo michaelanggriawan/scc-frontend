@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type InputHTMLAttributes } from "react";
 import { AdminHeader } from "@/components/admin-header";
 import { Alert, Btn, Spinner } from "@/components/ui";
 import { api, ApiError, fileUrl } from "@/lib/api";
+import {
+  blockNonDigitKeys,
+  blockNonDigitPaste,
+  isValidEmail,
+  isValidPhone,
+  isValidUploadSize,
+  MAX_UPLOAD_MB,
+} from "@/lib/validation";
 import type { NotificationPrefs, PaymentInfo, VenueInfo } from "@/lib/types";
 
 export default function AdminSettingsPage() {
@@ -48,18 +56,19 @@ function useSaver() {
       setBusy(false);
     }
   }
-  return { msg, err, busy, save };
+  return { msg, err, setErr, busy, save };
 }
 
 function Row({
   label,
   value,
   onChange,
+  ...rest
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
-}) {
+} & Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">) {
   return (
     <label className="flex flex-col gap-1">
       <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
@@ -68,6 +77,7 @@ function Row({
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        {...rest}
         className="border border-[#AAAAAA] bg-white h-10 px-3 text-sm"
       />
     </label>
@@ -76,23 +86,68 @@ function Row({
 
 function VenueSection({ initial }: { initial: VenueInfo }) {
   const [v, setV] = useState(initial);
-  const { msg, err, busy, save } = useSaver();
+  const { msg, err, setErr, busy, save } = useSaver();
+
+  function submit() {
+    if (v.email.trim() && !isValidEmail(v.email)) {
+      setErr("Please provide a valid email address.");
+      return;
+    }
+    if (v.whatsapp.trim() && !isValidPhone(v.whatsapp)) {
+      setErr("Please provide a valid WhatsApp number.");
+      return;
+    }
+    if (v.phone.trim() && !isValidPhone(v.phone)) {
+      setErr("Please provide a valid phone number.");
+      return;
+    }
+    save(() => api.put("/admin/settings/venue", v));
+  }
+
   return (
     <div className="bg-white border border-[#D1D1D1] p-6 flex flex-col gap-5">
       <h2 className="text-sm font-bold text-[#222] border-b border-[#D1D1D1] pb-3">
         Venue Info
       </h2>
-      <Row label="Venue Name" value={v.name} onChange={(x) => setV({ ...v, name: x })} />
-      <Row label="Address" value={v.address} onChange={(x) => setV({ ...v, address: x })} />
+      <Row
+        label="Venue Name"
+        placeholder="e.g. Serpong Convention Center"
+        value={v.name}
+        onChange={(x) => setV({ ...v, name: x })}
+      />
+      <Row
+        label="Address"
+        placeholder="e.g. Jl. Raya Serpong No. 1, Tangerang"
+        value={v.address}
+        onChange={(x) => setV({ ...v, address: x })}
+      />
       <div className="grid grid-cols-2 gap-4">
-        <Row label="Phone" value={v.phone} onChange={(x) => setV({ ...v, phone: x })} />
-        <Row label="WhatsApp" value={v.whatsapp} onChange={(x) => setV({ ...v, whatsapp: x })} />
+        <Row
+          label="Phone"
+          type="tel"
+          placeholder="e.g. 021 5555 0000"
+          value={v.phone}
+          onChange={(x) => setV({ ...v, phone: x })}
+        />
+        <Row
+          label="WhatsApp"
+          type="tel"
+          placeholder="e.g. +62 811 0000 0000"
+          value={v.whatsapp}
+          onChange={(x) => setV({ ...v, whatsapp: x })}
+        />
       </div>
-      <Row label="Email" value={v.email} onChange={(x) => setV({ ...v, email: x })} />
+      <Row
+        label="Email"
+        type="email"
+        placeholder="e.g. info@venue.com"
+        value={v.email}
+        onChange={(x) => setV({ ...v, email: x })}
+      />
       {msg && <Alert kind="success">{msg}</Alert>}
       {err && <Alert>{err}</Alert>}
       <div>
-        <Btn sm disabled={busy} onClick={() => save(() => api.put("/admin/settings/venue", v))}>
+        <Btn sm disabled={busy} onClick={submit}>
           Save Venue Info
         </Btn>
       </div>
@@ -102,10 +157,14 @@ function VenueSection({ initial }: { initial: VenueInfo }) {
 
 function PaymentSection({ initial }: { initial: PaymentInfo }) {
   const [p, setP] = useState(initial);
-  const { msg, err, busy, save } = useSaver();
+  const { msg, err, setErr, busy, save } = useSaver();
   const [uploading, setUploading] = useState(false);
 
   async function uploadQr(file: File) {
+    if (!isValidUploadSize(file)) {
+      setErr(`QR image must be ${MAX_UPLOAD_MB} MB or smaller.`);
+      return;
+    }
     setUploading(true);
     try {
       const res = await api.upload<{ fileUrl: string }>("/admin/uploads/qr", file);
@@ -120,10 +179,28 @@ function PaymentSection({ initial }: { initial: PaymentInfo }) {
       <h2 className="text-sm font-bold text-[#222] border-b border-[#D1D1D1] pb-3">
         Payment Info
       </h2>
-      <Row label="Bank Name" value={p.bankName} onChange={(x) => setP({ ...p, bankName: x })} />
+      <Row
+        label="Bank Name"
+        placeholder="e.g. BCA"
+        value={p.bankName}
+        onChange={(x) => setP({ ...p, bankName: x })}
+      />
       <div className="grid grid-cols-2 gap-4">
-        <Row label="Account Number" value={p.accountNumber} onChange={(x) => setP({ ...p, accountNumber: x })} />
-        <Row label="Account Name" value={p.accountName} onChange={(x) => setP({ ...p, accountName: x })} />
+        <Row
+          label="Account Number"
+          inputMode="numeric"
+          placeholder="e.g. 1234567890"
+          onKeyDown={blockNonDigitKeys}
+          onPaste={blockNonDigitPaste}
+          value={p.accountNumber}
+          onChange={(x) => setP({ ...p, accountNumber: x })}
+        />
+        <Row
+          label="Account Name"
+          placeholder="e.g. PT SCC Venue Indonesia"
+          value={p.accountName}
+          onChange={(x) => setP({ ...p, accountName: x })}
+        />
       </div>
       <label className="flex flex-col gap-1">
         <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
@@ -132,6 +209,7 @@ function PaymentSection({ initial }: { initial: PaymentInfo }) {
         <textarea
           value={p.instructions}
           onChange={(e) => setP({ ...p, instructions: e.target.value })}
+          placeholder="e.g. Transfer the exact amount and upload your receipt."
           className="border border-[#AAAAAA] bg-white px-3 py-2 text-sm min-h-[60px]"
         />
       </label>
@@ -149,7 +227,7 @@ function PaymentSection({ initial }: { initial: PaymentInfo }) {
             />
           )}
           <label className="border border-dashed border-[#AAAAAA] px-4 py-3 text-xs text-[#888] cursor-pointer">
-            {uploading ? "Uploading…" : "Upload QR image"}
+            {uploading ? "Uploading…" : `Upload QR image · Max ${MAX_UPLOAD_MB} MB`}
             <input
               type="file"
               accept="image/*"

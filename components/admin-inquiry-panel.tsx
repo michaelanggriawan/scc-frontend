@@ -8,6 +8,7 @@ import {
   fromDatetimeLocal,
   toDatetimeLocal,
 } from "@/lib/datetime";
+import { blockNonDigitKeys, blockNonDigitPaste } from "@/lib/validation";
 import type { AddOn, Inquiry, Room } from "@/lib/types";
 
 const EDITABLE = ["New Inquiry", "Awaiting Payment", "Payment Rejected"];
@@ -243,8 +244,12 @@ export function AdminInquiryPanel({
                   </span>
                   <input
                     type="number"
+                    min={0}
+                    step={1}
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
+                    onKeyDown={blockNonDigitKeys}
+                    onPaste={blockNonDigitPaste}
                     placeholder="e.g. 75000000"
                     className="border border-[#AAAAAA] bg-white h-10 px-3 text-sm"
                   />
@@ -257,6 +262,7 @@ export function AdminInquiryPanel({
                   <textarea
                     value={adminNotes}
                     onChange={(e) => setAdminNotes(e.target.value)}
+                    placeholder="Internal notes — not visible to the customer"
                     className="border border-[#AAAAAA] bg-white px-3 py-2 text-sm min-h-[50px]"
                   />
                 </label>

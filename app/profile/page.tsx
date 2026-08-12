@@ -16,6 +16,13 @@ import {
 import { api, ApiError, fileUrl, rupiah } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { formatDueDate } from "@/lib/datetime";
+import {
+  isValidEmail,
+  isValidPhone,
+  isValidUploadSize,
+  MAX_UPLOAD_MB,
+  validatePassword,
+} from "@/lib/validation";
 import type { Inquiry, PayPageData } from "@/lib/types";
 
 const CANCELLABLE = [
@@ -96,6 +103,18 @@ function AccountTab({ onSaved }: { onSaved: () => void }) {
   async function save() {
     setMsg("");
     setErr("");
+    if (!form.fullName.trim()) {
+      setErr("Please provide your full name.");
+      return;
+    }
+    if (!isValidEmail(form.email)) {
+      setErr("Please provide a valid email address.");
+      return;
+    }
+    if (form.phone.trim() && !isValidPhone(form.phone)) {
+      setErr("Please provide a valid phone number.");
+      return;
+    }
     try {
       await api.patch("/users/me", form);
       setMsg("Profile updated.");
@@ -108,6 +127,15 @@ function AccountTab({ onSaved }: { onSaved: () => void }) {
   async function changePassword() {
     setPwMsg("");
     setPwErr("");
+    if (!pw.current.trim()) {
+      setPwErr("Please enter your current password.");
+      return;
+    }
+    const passwordError = validatePassword(pw.next);
+    if (passwordError) {
+      setPwErr(passwordError);
+      return;
+    }
     try {
       await api.patch("/auth/change-password", {
         currentPassword: pw.current,
@@ -122,10 +150,34 @@ function AccountTab({ onSaved }: { onSaved: () => void }) {
 
   return (
     <div className="max-w-lg flex flex-col gap-6">
-      <TextField label="Full Name" value={form.fullName} onChange={set("fullName")} />
-      <TextField label="Phone Number" value={form.phone} onChange={set("phone")} />
-      <TextField label="Email Address" type="email" value={form.email} onChange={set("email")} />
-      <TextField label="Company Name" value={form.company} onChange={set("company")} />
+      <TextField
+        label="Full Name"
+        placeholder="e.g. Jane Doe"
+        required
+        value={form.fullName}
+        onChange={set("fullName")}
+      />
+      <TextField
+        label="Phone Number"
+        type="tel"
+        placeholder="e.g. 0812 3456 7890"
+        value={form.phone}
+        onChange={set("phone")}
+      />
+      <TextField
+        label="Email Address"
+        type="email"
+        placeholder="e.g. jane@email.com"
+        required
+        value={form.email}
+        onChange={set("email")}
+      />
+      <TextField
+        label="Company Name"
+        placeholder="e.g. PT Acme Indonesia"
+        value={form.company}
+        onChange={set("company")}
+      />
       {msg && <Alert kind="success">{msg}</Alert>}
       {err && <Alert>{err}</Alert>}
       <div>
@@ -137,12 +189,17 @@ function AccountTab({ onSaved }: { onSaved: () => void }) {
         <TextField
           label="Current Password"
           type="password"
+          placeholder="Your current password"
+          required
           value={pw.current}
           onChange={(e) => setPw((p) => ({ ...p, current: e.target.value }))}
         />
         <TextField
           label="New Password"
           type="password"
+          placeholder="Min 8 chars, upper, lower, number & symbol"
+          required
+          minLength={8}
           value={pw.next}
           onChange={(e) => setPw((p) => ({ ...p, next: e.target.value }))}
         />
@@ -342,13 +399,22 @@ function BookingDetail({
                 {file ? file.name : "Upload Proof of Payment"}
               </span>
               <span className="text-[10px] text-[#AAAAAA]">
-                JPG, PNG or PDF · Max 5 MB
+                JPG, PNG or PDF · Max {MAX_UPLOAD_MB} MB
               </span>
               <input
                 type="file"
                 accept="image/*,application/pdf"
                 className="hidden"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                onChange={(e) => {
+                  const f = e.target.files?.[0] ?? null;
+                  if (f && !isValidUploadSize(f)) {
+                    setErr(`File must be ${MAX_UPLOAD_MB} MB or smaller.`);
+                    setFile(null);
+                    return;
+                  }
+                  setErr("");
+                  setFile(f);
+                }}
               />
             </label>
             {err && <Alert>{err}</Alert>}

@@ -148,6 +148,10 @@ function AddonForm({
 
   async function save() {
     setErr("");
+    if (!d.name.trim()) {
+      setErr("Add-on name is required.");
+      return;
+    }
     setBusy(true);
     try {
       await onSave(d);
@@ -167,6 +171,8 @@ function AddonForm({
         <input
           value={d.name}
           onChange={(e) => setD({ ...d, name: e.target.value })}
+          placeholder="e.g. Extra LED Wall"
+          required
           className="border border-[#AAAAAA] bg-white h-10 px-3 text-sm"
         />
       </label>
@@ -177,6 +183,7 @@ function AddonForm({
         <textarea
           value={d.description}
           onChange={(e) => setD({ ...d, description: e.target.value })}
+          placeholder="Describe what's included…"
           className="border border-[#AAAAAA] bg-white px-3 py-2 text-sm min-h-[70px]"
         />
       </label>
@@ -194,7 +201,7 @@ function AddonForm({
       </div>
       {err && <Alert>{err}</Alert>}
       <div className="flex gap-2">
-        <Btn sm onClick={save} disabled={busy}>
+        <Btn sm onClick={save} disabled={busy || !d.name.trim()}>
           Save Add-on
         </Btn>
         <OutlineBtn sm onClick={onCancel}>

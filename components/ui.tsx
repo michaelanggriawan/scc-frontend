@@ -1,6 +1,13 @@
 'use client';
 
-import { ReactNode, InputHTMLAttributes, TextareaHTMLAttributes } from 'react';
+import {
+  ReactNode,
+  InputHTMLAttributes,
+  TextareaHTMLAttributes,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import type { InquiryStatus, EntityStatus } from '@/lib/types';
 
 // ─── Primitives (ported from SCC 2/src/app/App.tsx) ──────────────────────────
@@ -126,8 +133,9 @@ export function SWrap({
 // Labelled text input
 export function TextField({
   label,
+  error,
   ...props
-}: { label: string } & InputHTMLAttributes<HTMLInputElement>) {
+}: { label: string; error?: string } & InputHTMLAttributes<HTMLInputElement>) {
   return (
     <label className="flex flex-col gap-1">
       <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
@@ -135,16 +143,22 @@ export function TextField({
       </span>
       <input
         {...props}
-        className="border border-[#AAAAAA] bg-white h-10 px-3 text-sm text-[#333] placeholder:text-[#AAAAAA] focus:border-[#222] outline-none"
+        className={`border bg-white h-10 px-3 text-sm text-[#333] placeholder:text-[#AAAAAA] outline-none ${
+          error
+            ? "border-[#c33] focus:border-[#c33]"
+            : "border-[#AAAAAA] focus:border-[#222]"
+        }`}
       />
+      {error && <span className="text-xs text-[#c33]">{error}</span>}
     </label>
   );
 }
 
 export function TextArea({
   label,
+  error,
   ...props
-}: { label: string } & TextareaHTMLAttributes<HTMLTextAreaElement>) {
+}: { label: string; error?: string } & TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <label className="flex flex-col gap-1">
       <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
@@ -152,9 +166,76 @@ export function TextArea({
       </span>
       <textarea
         {...props}
-        className="border border-[#AAAAAA] bg-white px-3 py-2 text-sm text-[#333] min-h-[100px] placeholder:text-[#AAAAAA] focus:border-[#222] outline-none"
+        className={`border bg-white px-3 py-2 text-sm text-[#333] min-h-[100px] placeholder:text-[#AAAAAA] outline-none ${
+          error
+            ? "border-[#c33] focus:border-[#c33]"
+            : "border-[#AAAAAA] focus:border-[#222]"
+        }`}
       />
+      {error && <span className="text-xs text-[#c33]">{error}</span>}
     </label>
+  );
+}
+
+// Counts up from 0 to the numeric portion(s) of `value` once it scrolls into
+// view (e.g. "1008 m²" -> animates 1008, "14m × 8m" -> animates both 14 and 8).
+export function AnimatedStat({
+  value,
+  className = "",
+}: {
+  value: string;
+  className?: string;
+}) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const [display, setDisplay] = useState(() => value.replace(/\d+/g, "0"));
+  const played = useRef(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    function animate() {
+      const targets = [...value.matchAll(/\d+/g)].map((m) => ({
+        num: parseInt(m[0], 10),
+        index: m.index!,
+        length: m[0].length,
+      }));
+      const duration = 1200;
+      const start = performance.now();
+
+      function tick(now: number) {
+        const progress = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        let result = value;
+        for (let i = targets.length - 1; i >= 0; i--) {
+          const t = targets[i];
+          const current = Math.round(t.num * eased);
+          result = result.slice(0, t.index) + current + result.slice(t.index + t.length);
+        }
+        setDisplay(result);
+        if (progress < 1) requestAnimationFrame(tick);
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !played.current) {
+          played.current = true;
+          animate();
+        }
+      },
+      { threshold: 0.4 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [value]);
+
+  return (
+    <p ref={ref} className={className}>
+      {display}
+    </p>
   );
 }
 
