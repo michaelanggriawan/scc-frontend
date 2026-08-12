@@ -8,8 +8,8 @@ export function AdminHeader({
   children?: ReactNode;
 }) {
   return (
-    <div className="bg-white border-b border-[#D1D1D1] min-h-16 flex items-center px-8 gap-4 py-3">
-      <h1 className="text-base font-bold text-[#222] flex-1">{title}</h1>
+    <div className="bg-[var(--surface-raised)] border-b border-[var(--surface-border)] min-h-20 flex items-center px-8 gap-4 py-3">
+      <h1 className="font-display text-2xl text-ink flex-1">{title}</h1>
       {children}
     </div>
   );
