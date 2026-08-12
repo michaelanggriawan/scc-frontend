@@ -21,6 +21,8 @@ export default function AdminAddonsPage() {
   const [addons, setAddons] = useState<AddOn[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setAddons(await api.get<AddOn[]>("/admin/addons"));
@@ -32,6 +34,18 @@ export default function AdminAddonsPage() {
   async function toggleStatus(a: AddOn) {
     await api.patch(`/admin/addons/${a.id}/status`, {
       status: a.status === "Active" ? "Inactive" : "Active",
+    });
+    load();
+  }
+
+  async function reorder(from: number, to: number) {
+    if (!addons || from === to) return;
+    const reordered = [...addons];
+    const [moved] = reordered.splice(from, 1);
+    reordered.splice(to, 0, moved);
+    setAddons(reordered);
+    await api.patch("/admin/addons/reorder", {
+      ids: reordered.map((a) => a.id),
     });
     load();
   }
@@ -67,9 +81,9 @@ export default function AdminAddonsPage() {
             <table className="w-full min-w-[560px]">
               <thead>
                 <tr className="border-b border-[var(--surface-border)] bg-cream">
-                  {["Name", "Description", "Status", ""].map((h) => (
+                  {["", "Name", "Description", "Status", ""].map((h, i) => (
                     <th
-                      key={h}
+                      key={i}
                       className="text-left text-[10px] font-semibold text-gold-dim uppercase tracking-wider px-5 py-3.5"
                     >
                       {h}
@@ -78,14 +92,49 @@ export default function AdminAddonsPage() {
                 </tr>
               </thead>
               <tbody>
-                {addons.map((a) => (
+                {addons.map((a, idx) => (
                   <Fragment key={a.id}>
                     <tr
                       onClick={() => setOpenId(openId === a.id ? null : a.id)}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        if (dragIndex !== null && overIndex !== idx) setOverIndex(idx);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (dragIndex !== null) reorder(dragIndex, idx);
+                        setDragIndex(null);
+                        setOverIndex(null);
+                      }}
                       className={`border-b border-[var(--surface-border)] cursor-pointer hover:bg-cream/60 transition-colors ${
                         openId === a.id ? "bg-cream" : ""
+                      } ${dragIndex === idx ? "opacity-40" : ""} ${
+                        overIndex === idx && dragIndex !== idx
+                          ? "border-t-2 border-t-gold"
+                          : ""
                       }`}
                     >
+                      <td
+                        className="px-3 py-4"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div
+                          draggable
+                          onDragStart={(e) => {
+                            e.stopPropagation();
+                            e.dataTransfer.effectAllowed = "move";
+                            setDragIndex(idx);
+                          }}
+                          onDragEnd={() => {
+                            setDragIndex(null);
+                            setOverIndex(null);
+                          }}
+                          className="flex items-center justify-center text-[var(--text-muted)] hover:text-ink cursor-grab active:cursor-grabbing"
+                          title="Drag to reorder"
+                        >
+                          <Icon name="gripVertical" className="w-4 h-4" />
+                        </div>
+                      </td>
                       <td className="px-5 py-4 text-sm font-semibold text-ink">
                         {a.name}
                       </td>
@@ -109,7 +158,7 @@ export default function AdminAddonsPage() {
                     </tr>
                     {openId === a.id && (
                       <tr>
-                        <td colSpan={4} className="p-0">
+                        <td colSpan={5} className="p-0">
                           <div className="border-t border-[var(--surface-border)] bg-cream p-7">
                             <AddonForm
                               initial={a}
@@ -133,7 +182,7 @@ export default function AdminAddonsPage() {
                 ))}
                 {addons.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-5 py-10 text-center text-sm text-[var(--text-muted)]">
+                    <td colSpan={5} className="px-5 py-10 text-center text-sm text-[var(--text-muted)]">
                       No add-ons yet.
                     </td>
                   </tr>

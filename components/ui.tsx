@@ -249,6 +249,16 @@ const ICON_PATHS: Record<string, ReactNode> = {
       <path d="M9.75 18.5a2.25 2.25 0 0 0 4.5 0" strokeLinecap="round" />
     </>
   ),
+  gripVertical: (
+    <>
+      <circle cx="9" cy="6" r="1.15" fill="currentColor" stroke="none" />
+      <circle cx="9" cy="12" r="1.15" fill="currentColor" stroke="none" />
+      <circle cx="9" cy="18" r="1.15" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="6" r="1.15" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="12" r="1.15" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="18" r="1.15" fill="currentColor" stroke="none" />
+    </>
+  ),
 };
 
 export function Icon({
