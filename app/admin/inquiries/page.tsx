@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AdminHeader } from "@/components/admin-header";
 import { InquiryTable } from "../page";
-import { Spinner } from "@/components/ui";
+import { Icon, OutlineBtn, Select, Spinner, TextField } from "@/components/ui";
 import { api } from "@/lib/api";
 import type { AddOn, Inquiry, InquiryStatus, Room } from "@/lib/types";
 
@@ -73,54 +73,65 @@ export default function AdminInquiriesPage() {
     <>
       <AdminHeader title="Inquiries" />
       <div className="px-8 py-8 flex flex-col gap-6">
-        <div className="flex items-center gap-3 flex-wrap">
-          <select
-            value={status}
-            onChange={(e) => {
-              setPage(1);
-              setStatus(e.target.value);
-            }}
-            className="border border-[#AAAAAA] bg-white h-9 px-3 text-xs text-[#444]"
-          >
-            <option value="">All Statuses</option>
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => {
-              setPage(1);
-              setDateFrom(e.target.value);
-            }}
-            className="border border-[#AAAAAA] bg-white h-9 px-3 text-xs text-[#444]"
-          />
-          <span className="text-xs text-[#888]">to</span>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => {
-              setPage(1);
-              setDateTo(e.target.value);
-            }}
-            className="border border-[#AAAAAA] bg-white h-9 px-3 text-xs text-[#444]"
-          />
-          <input
-            type="text"
-            placeholder="Search name or ref…"
-            value={search}
-            onChange={(e) => {
-              setPage(1);
-              setSearch(e.target.value);
-            }}
-            className="border border-[#AAAAAA] bg-white h-9 px-3 text-xs text-[#444] flex-1 min-w-[200px]"
-          />
+        <div className="bg-white border border-[var(--surface-border)] p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <Icon name="filter" className="w-4 h-4 text-gold-dim" />
+            <p className="text-xs font-semibold text-ink uppercase tracking-wide">
+              Filters
+            </p>
+          </div>
+          <div className="flex items-end gap-4 flex-wrap">
+            <Select
+              label="Status"
+              value={status}
+              onChange={(e) => {
+                setPage(1);
+                setStatus(e.target.value);
+              }}
+              className="w-48"
+            >
+              <option value="">All statuses</option>
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </Select>
+            <TextField
+              label="From"
+              type="date"
+              value={dateFrom}
+              onChange={(e) => {
+                setPage(1);
+                setDateFrom(e.target.value);
+              }}
+              className="w-40"
+            />
+            <TextField
+              label="To"
+              type="date"
+              value={dateTo}
+              onChange={(e) => {
+                setPage(1);
+                setDateTo(e.target.value);
+              }}
+              className="w-40"
+            />
+            <TextField
+              label="Search"
+              type="text"
+              placeholder="Search name or ref…"
+              value={search}
+              onChange={(e) => {
+                setPage(1);
+                setSearch(e.target.value);
+              }}
+              className="flex-1 min-w-[200px]"
+            />
+          </div>
         </div>
 
-        <div className="bg-white border border-[#D1D1D1]">
+        <div className="bg-white border border-[var(--surface-border)]">
           {loading ? (
             <Spinner />
           ) : (
@@ -135,25 +146,17 @@ export default function AdminInquiriesPage() {
           )}
         </div>
 
-        <div className="flex items-center justify-between text-xs text-[#666]">
+        <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
           <span>
             {total} inquiries · page {page} of {pages}
           </span>
           <div className="flex gap-2">
-            <button
-              disabled={page <= 1}
-              onClick={() => setPage((p) => p - 1)}
-              className="border border-[#AAAAAA] px-3 py-1 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
-            >
+            <OutlineBtn sm disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
               Prev
-            </button>
-            <button
-              disabled={page >= pages}
-              onClick={() => setPage((p) => p + 1)}
-              className="border border-[#AAAAAA] px-3 py-1 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
-            >
+            </OutlineBtn>
+            <OutlineBtn sm disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>
               Next
-            </button>
+            </OutlineBtn>
           </div>
         </div>
       </div>

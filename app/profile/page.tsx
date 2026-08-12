@@ -6,9 +6,10 @@ import { NavBar, Footer, FloatingWA } from "@/components/site";
 import {
   Alert,
   Btn,
-  IconBox,
+  Icon,
   OutlineBtn,
   PhotoBox,
+  SLabel,
   Spinner,
   StatusBadge,
   TextField,
@@ -44,30 +45,30 @@ export default function ProfilePage() {
   if (loading || !user) return <Spinner label="Loading your profile…" />;
 
   return (
-    <div className="bg-[#F7F7F7] min-h-screen">
+    <div className="bg-white min-h-screen">
       <NavBar />
       <FloatingWA />
       <div className="max-w-screen-xl mx-auto px-6 md:px-16 py-12">
-        <div className="flex items-center gap-4 mb-8">
-          <PhotoBox className="w-14 h-14" />
+        <div className="flex items-center gap-4 mb-10">
+          <PhotoBox icon="user" className="w-14 h-14 flex-shrink-0" />
           <div>
-            <p className="text-lg font-bold text-[#222]">{user.fullName}</p>
-            <p className="text-sm text-[#888]">{user.email}</p>
+            <p className="font-display text-xl text-ink">{user.fullName}</p>
+            <p className="text-sm text-ink/50">{user.email}</p>
           </div>
         </div>
 
-        <div className="flex border-b border-[#D1D1D1] mb-8">
+        <div className="flex border-b border-[var(--surface-border)] mb-10">
           {(["account", "bookings"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-6 py-3 text-sm font-semibold border-b-2 cursor-pointer ${
+              className={`px-6 py-3 text-sm font-semibold border-b-2 cursor-pointer transition-colors duration-150 ${
                 tab === t
-                  ? "border-[#222] text-[#222]"
-                  : "border-transparent text-[#888]"
+                  ? "border-gold text-ink"
+                  : "border-transparent text-ink/45 hover:text-ink/70"
               }`}
             >
-              {t === "account" ? "Account Info" : "My Bookings"}
+              {t === "account" ? "Account info" : "My bookings"}
             </button>
           ))}
         </div>
@@ -151,21 +152,21 @@ function AccountTab({ onSaved }: { onSaved: () => void }) {
   return (
     <div className="max-w-lg flex flex-col gap-6">
       <TextField
-        label="Full Name"
+        label="Full name"
         placeholder="e.g. Jane Doe"
         required
         value={form.fullName}
         onChange={set("fullName")}
       />
       <TextField
-        label="Phone Number"
+        label="Phone number"
         type="tel"
         placeholder="e.g. 0812 3456 7890"
         value={form.phone}
         onChange={set("phone")}
       />
       <TextField
-        label="Email Address"
+        label="Email address"
         type="email"
         placeholder="e.g. jane@email.com"
         required
@@ -173,7 +174,7 @@ function AccountTab({ onSaved }: { onSaved: () => void }) {
         onChange={set("email")}
       />
       <TextField
-        label="Company Name"
+        label="Company name"
         placeholder="e.g. PT Acme Indonesia"
         value={form.company}
         onChange={set("company")}
@@ -181,13 +182,14 @@ function AccountTab({ onSaved }: { onSaved: () => void }) {
       {msg && <Alert kind="success">{msg}</Alert>}
       {err && <Alert>{err}</Alert>}
       <div>
-        <Btn onClick={save}>Save Changes</Btn>
+        <Btn onClick={save}>Save changes</Btn>
       </div>
 
-      <div className="border-t border-[#D1D1D1] pt-6 flex flex-col gap-4">
-        <p className="text-sm font-semibold text-[#222]">Change Password</p>
+      <div className="border-t border-[var(--surface-border)] pt-6 flex flex-col gap-4">
+        <SLabel>Security</SLabel>
+        <p className="text-sm font-semibold text-ink -mt-3">Change password</p>
         <TextField
-          label="Current Password"
+          label="Current password"
           type="password"
           placeholder="Your current password"
           required
@@ -195,7 +197,7 @@ function AccountTab({ onSaved }: { onSaved: () => void }) {
           onChange={(e) => setPw((p) => ({ ...p, current: e.target.value }))}
         />
         <TextField
-          label="New Password"
+          label="New password"
           type="password"
           placeholder="Min 8 chars, upper, lower, number & symbol"
           required
@@ -206,7 +208,7 @@ function AccountTab({ onSaved }: { onSaved: () => void }) {
         {pwMsg && <Alert kind="success">{pwMsg}</Alert>}
         {pwErr && <Alert>{pwErr}</Alert>}
         <div>
-          <OutlineBtn onClick={changePassword}>Change Password</OutlineBtn>
+          <OutlineBtn onClick={changePassword}>Change password</OutlineBtn>
         </div>
       </div>
     </div>
@@ -228,29 +230,37 @@ function BookingsTab() {
 
   if (inquiries === null) return <Spinner />;
   if (inquiries.length === 0)
-    return <p className="text-sm text-[#888]">You have no bookings yet.</p>;
+    return (
+      <p className="flex items-center gap-2 text-sm text-ink/50">
+        <Icon name="fileText" className="w-4 h-4 text-gold-dim" />
+        You have no bookings yet.
+      </p>
+    );
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_150px] gap-4 px-5 py-2 bg-[#EBEBEB] border border-[#D1D1D1] text-[10px] font-semibold text-[#666] uppercase tracking-wider">
+      <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_150px] gap-4 px-5 py-2.5 bg-cream border border-mahogany/10 text-[10px] font-semibold text-gold-dim uppercase tracking-wider">
         <span>Reference</span>
         <span>Room</span>
-        <span>Requested Date</span>
+        <span>Requested date</span>
         <span>Status</span>
       </div>
       {inquiries.map((inq) => (
         <div key={inq.ref} className="flex flex-col">
           <button
             onClick={() => setOpenRef(openRef === inq.ref ? null : inq.ref)}
-            className={`grid grid-cols-2 sm:grid-cols-[1fr_1fr_1fr_150px] gap-2 sm:gap-4 px-5 py-4 bg-white border text-left cursor-pointer hover:bg-[#F5F5F5] ${
-              openRef === inq.ref ? "border-[#222]" : "border-[#D1D1D1]"
+            className={`grid grid-cols-2 sm:grid-cols-[1fr_1fr_1fr_150px] gap-2 sm:gap-4 px-5 py-4 bg-[var(--surface)] border text-left cursor-pointer transition-colors duration-150 hover:border-gold-dim ${
+              openRef === inq.ref ? "border-gold" : "border-[var(--surface-border)]"
             }`}
           >
-            <span className="text-xs font-bold text-[#222]">{inq.ref}</span>
-            <span className="text-xs text-[#444] hidden sm:block">
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-ink">
+              <Icon name="fileText" className="w-3.5 h-3.5 text-gold-dim flex-shrink-0" />
+              {inq.ref}
+            </span>
+            <span className="text-xs text-ink/60 hidden sm:block">
               {inq.room?.name ?? "—"}
             </span>
-            <span className="text-xs text-[#444] hidden sm:block">
+            <span className="text-xs text-ink/60 hidden sm:block">
               {inq.date || "—"}
             </span>
             <StatusBadge status={inq.status} />
@@ -323,22 +333,28 @@ function BookingDetail({
     }
   }
 
-  if (!inq) return <div className="border border-[#D1D1D1] bg-white p-5"><Spinner /></div>;
+  if (!inq)
+    return (
+      <div className="border border-[var(--surface-border)] border-t-0 bg-[var(--surface)] p-5">
+        <Spinner />
+      </div>
+    );
 
   const payable =
     inq.status === "Awaiting Payment" || inq.status === "Payment Rejected";
 
   return (
-    <div className="border border-[#D1D1D1] border-t-0 bg-white p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="border border-[var(--surface-border)] border-t-0 bg-[var(--surface)] p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
       {/* Left: details */}
       <div className="flex flex-col gap-3">
-        <p className="text-xs font-semibold text-[#444] uppercase tracking-wide">
-          Inquiry Details
+        <p className="flex items-center gap-1.5 text-xs font-semibold text-ink/60 uppercase tracking-wide">
+          <Icon name="fileText" className="w-3.5 h-3.5 text-gold-dim" />
+          Inquiry details
         </p>
         <Detail label="Room" value={inq.room?.name} />
         <Detail label="Category" value={inq.category} />
         <Detail label="Date" value={inq.date} />
-        <Detail label="Start Time" value={inq.time} />
+        <Detail label="Start time" value={inq.time} />
         <Detail label="Duration" value={inq.duration} />
         <Detail
           label="Add-ons"
@@ -346,7 +362,7 @@ function BookingDetail({
         />
         <Detail label="Notes" value={inq.notes} />
         {inq.agreedPrice != null && (
-          <Detail label="Agreed Price" value={rupiah(inq.agreedPrice)} />
+          <Detail label="Agreed price" value={rupiah(inq.agreedPrice)} />
         )}
       </div>
 
@@ -354,18 +370,19 @@ function BookingDetail({
       <div className="flex flex-col gap-3">
         {payable && pay && (
           <>
-            <p className="text-xs font-semibold text-[#444] uppercase tracking-wide">
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-ink/60 uppercase tracking-wide">
+              <Icon name="creditCard" className="w-3.5 h-3.5 text-gold-dim" />
               Payment
             </p>
-            <div className="border border-[#D1D1D1] px-4 py-3 flex flex-col gap-1">
-              <p className="text-sm font-bold text-[#222]">
+            <div className="border border-[var(--surface-border)] px-4 py-3 flex flex-col gap-1">
+              <p className="font-display text-lg text-mahogany">
                 {rupiah(pay.amount)}
               </p>
-              <p className="text-[11px] text-[#888]">
+              <p className="text-[11px] text-ink/50">
                 Due by {formatDueDate(inq.paymentDueDate)}
               </p>
-              <div className="mt-2 text-xs text-[#555]">
-                <p className="font-semibold">Transfer to:</p>
+              <div className="mt-2 text-xs text-ink/70">
+                <p className="font-semibold text-ink">Transfer to:</p>
                 <p>
                   {pay.paymentInfo.bankName} · {pay.paymentInfo.accountNumber}
                 </p>
@@ -375,11 +392,11 @@ function BookingDetail({
                   <img
                     src={fileUrl(pay.paymentInfo.qrImageUrl)}
                     alt="Payment QR"
-                    className="w-32 h-32 object-contain mt-2 border border-[#EBEBEB]"
+                    className="w-32 h-32 object-contain mt-2 border border-[var(--surface-border)]"
                   />
                 )}
                 {pay.paymentInfo.instructions && (
-                  <p className="mt-1 text-[11px] text-[#888]">
+                  <p className="mt-1 text-[11px] text-ink/50">
                     {pay.paymentInfo.instructions}
                   </p>
                 )}
@@ -393,12 +410,12 @@ function BookingDetail({
               </Alert>
             )}
 
-            <label className="border border-dashed border-[#AAAAAA] p-4 flex flex-col items-center gap-1 cursor-pointer">
-              <IconBox className="w-6 h-6" />
-              <span className="text-xs text-[#888]">
-                {file ? file.name : "Upload Proof of Payment"}
+            <label className="border border-dashed border-[var(--surface-border-strong)] p-4 flex flex-col items-center gap-1.5 cursor-pointer transition-colors duration-150 hover:border-gold">
+              <Icon name="upload" className="w-5 h-5 text-gold-dim" />
+              <span className="text-xs text-ink/70">
+                {file ? file.name : "Upload proof of payment"}
               </span>
-              <span className="text-[10px] text-[#AAAAAA]">
+              <span className="text-[10px] text-ink/40">
                 JPG, PNG or PDF · Max {MAX_UPLOAD_MB} MB
               </span>
               <input
@@ -419,17 +436,18 @@ function BookingDetail({
             </label>
             {err && <Alert>{err}</Alert>}
             <Btn full sm disabled={!file || busy} onClick={submitProof}>
-              {busy ? "Submitting…" : "Submit Payment"}
+              {busy ? "Submitting…" : "Submit payment"}
             </Btn>
           </>
         )}
 
         {inq.status === "Payment Submitted" && (
-          <div className="border border-[#D1D1D1] px-4 py-4 bg-[#F7F7F7]">
-            <p className="text-xs font-semibold text-[#444] uppercase tracking-wide mb-1">
-              Payment Under Review
+          <div className="border border-[var(--surface-border)] px-4 py-4 bg-cream">
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-ink/70 uppercase tracking-wide mb-1">
+              <Icon name="clock" className="w-3.5 h-3.5 text-gold-dim" />
+              Payment under review
             </p>
-            <p className="text-xs text-[#888] leading-relaxed">
+            <p className="text-xs text-ink/50 leading-relaxed">
               Your proof has been submitted. Our team will verify and confirm
               within 1 business day.
             </p>
@@ -437,11 +455,12 @@ function BookingDetail({
         )}
 
         {inq.status === "Confirmed" && (
-          <div className="border border-[#222] px-4 py-4">
-            <p className="text-xs font-semibold text-[#222] uppercase tracking-wide mb-1">
-              Booking Confirmed
+          <div className="border border-success/50 px-4 py-4 bg-success/10">
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-success uppercase tracking-wide mb-1">
+              <Icon name="checkCircle" className="w-3.5 h-3.5" />
+              Booking confirmed
             </p>
-            <p className="text-xs text-[#555]">
+            <p className="text-xs text-ink/60">
               Your booking is confirmed. Our team will reach out with final
               details.
             </p>
@@ -449,22 +468,23 @@ function BookingDetail({
         )}
 
         {inq.status === "New Inquiry" && (
-          <div className="border border-[#D1D1D1] px-4 py-4 bg-[#F7F7F7]">
-            <p className="text-xs font-semibold text-[#888] uppercase tracking-wide mb-1">
-              New Inquiry
+          <div className="border border-[var(--surface-border)] px-4 py-4 bg-cream">
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-ink/60 uppercase tracking-wide mb-1">
+              <Icon name="info" className="w-3.5 h-3.5 text-gold-dim" />
+              New inquiry
             </p>
-            <p className="text-xs text-[#888]">
+            <p className="text-xs text-ink/50">
               Our team will contact you via WhatsApp to discuss pricing.
             </p>
           </div>
         )}
 
         {inq.status === "Cancelled" && (
-          <div className="border border-[#AAAAAA] px-4 py-4">
-            <p className="text-xs font-semibold text-[#888] uppercase tracking-wide mb-1">
+          <div className="border border-[var(--surface-border-strong)] px-4 py-4">
+            <p className="text-xs font-semibold text-ink/60 uppercase tracking-wide mb-1">
               Cancelled
             </p>
-            <p className="text-xs text-[#888]">
+            <p className="text-xs text-ink/50">
               Cancelled by {inq.cancelledBy || "—"}
               {inq.cancelReason ? ` · ${inq.cancelReason}` : ""}
             </p>
@@ -472,11 +492,11 @@ function BookingDetail({
         )}
 
         {CANCELLABLE.includes(inq.status) && (
-          <div className="border-t border-[#EBEBEB] pt-3 mt-1">
+          <div className="border-t border-[var(--surface-border)] pt-3 mt-1">
             {!showCancel ? (
               <button
                 onClick={() => setShowCancel(true)}
-                className="text-xs text-[#888] underline cursor-pointer"
+                className="text-xs text-ink/50 underline underline-offset-2 cursor-pointer hover:text-ink/80 transition-colors duration-150"
               >
                 Cancel this booking
               </button>
@@ -486,14 +506,14 @@ function BookingDetail({
                   value={cancelReason}
                   onChange={(e) => setCancelReason(e.target.value)}
                   placeholder="Reason (optional)"
-                  className="border border-[#AAAAAA] bg-white px-3 py-2 text-xs min-h-[60px]"
+                  className="border border-[var(--field-border)] bg-[var(--field-bg)] text-ink placeholder:text-[var(--field-placeholder)] px-3 py-2 text-xs min-h-[60px] outline-none focus:border-gold transition-colors duration-150"
                 />
                 <div className="flex gap-2">
                   <Btn sm onClick={cancel} disabled={busy}>
-                    Confirm Cancellation
+                    Confirm cancellation
                   </Btn>
                   <OutlineBtn sm onClick={() => setShowCancel(false)}>
-                    Never Mind
+                    Never mind
                   </OutlineBtn>
                 </div>
               </div>
@@ -508,8 +528,8 @@ function BookingDetail({
 function Detail({ label, value }: { label: string; value?: string | null }) {
   return (
     <div className="flex gap-4">
-      <span className="text-xs text-[#888] w-24 flex-shrink-0">{label}</span>
-      <span className="text-xs text-[#333]">{value || "—"}</span>
+      <span className="text-xs text-ink/45 w-24 flex-shrink-0">{label}</span>
+      <span className="text-xs text-ink/85">{value || "—"}</span>
     </div>
   );
 }

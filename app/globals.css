@@ -1,16 +1,217 @@
 @import "tailwindcss";
 
-/* SCC keeps a single light theme (matches the SCC 2 wireframe). */
+/* ─── SCC — White, Red & Gold identity ─────────────────────────────────────
+   White is the primary surface throughout — like gallery-white walls —
+   with deep mahogany and gold used as supporting accents: headline text,
+   borders, icons, buttons, and a small number of deliberately dark bands
+   (hero imagery, footer, admin sidebar) that bookend the page for drama. */
+
+@theme {
+  --color-mahogany: #3d0907;
+  --color-mahogany-2: #2a0201;
+  --color-cherry: #550005;
+  --color-cherry-light: #6e0208;
+  --color-custard: #e6dbae;
+  --color-custard-dim: #cdbf8a;
+  --color-cream: #faf6e8;
+  --color-gold: #c9a227;
+  --color-gold-light: #e3c565;
+  --color-gold-dim: #8a6f27;
+  --color-ink: #2a0201;
+  --color-success: #3f7d54;
+  --color-danger: #d1483a;
+
+  --font-display: "Playfair Display", ui-serif, Georgia, serif;
+  --font-sans: "Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --shadow-gold: 0 1px 0 0 rgba(201, 162, 39, 0.35);
+}
+
+/* Context-scoped surface tokens: components read these instead of raw
+   palette colors, so the same primitives (cards, inputs, buttons) render
+   correctly whether they sit in the default white workspace or inside a
+   deliberately dark band (.scc-dark — footer, admin sidebar, hero copy). */
+:root {
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-border: rgba(61, 9, 7, 0.12);
+  --surface-border-strong: rgba(201, 162, 39, 0.55);
+  --text-primary: var(--color-ink);
+  --text-muted: rgba(42, 2, 1, 0.6);
+  --field-bg: #ffffff;
+  --field-border: rgba(61, 9, 7, 0.18);
+  --field-placeholder: rgba(42, 2, 1, 0.35);
+}
+
+/* Back-compat alias — the admin shell still wraps its content in this
+   class; it now matches the (light) default exactly. */
+.scc-light {
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-border: rgba(61, 9, 7, 0.12);
+  --surface-border-strong: rgba(201, 162, 39, 0.55);
+  --text-primary: var(--color-ink);
+  --text-muted: rgba(42, 2, 1, 0.6);
+  --field-bg: #ffffff;
+  --field-border: rgba(61, 9, 7, 0.18);
+  --field-placeholder: rgba(42, 2, 1, 0.35);
+}
+
+.scc-dark {
+  --surface: var(--color-mahogany);
+  --surface-raised: var(--color-cherry);
+  --surface-border: rgba(230, 219, 174, 0.16);
+  --surface-border-strong: rgba(201, 162, 39, 0.45);
+  --text-primary: var(--color-custard);
+  --text-muted: rgba(230, 219, 174, 0.64);
+  --field-bg: rgba(42, 2, 1, 0.55);
+  --field-border: rgba(230, 219, 174, 0.28);
+  --field-placeholder: rgba(230, 219, 174, 0.4);
+}
+
+html {
+  font-size: 112.5%; /* 18px base — the whole rem-based type scale grows with it */
+}
+
 html,
 body {
-  background: #f7f7f7;
-  color: #222222;
-  font-family:
-    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial,
-    sans-serif;
+  background: #ffffff;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
 }
 
 * {
   box-sizing: border-box;
+}
+
+::selection {
+  background: var(--color-gold);
+  color: var(--color-mahogany-2);
+}
+
+/* Thin gold-on-cream scrollbar, WebKit + Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gold-dim) var(--color-cream);
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: var(--color-cream);
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-gold-dim);
+  border: 2px solid var(--color-cream);
+  border-radius: 999px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  background: var(--color-gold);
+  color: var(--color-mahogany-2);
+  padding: 0.6rem 1.2rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.skip-link:focus {
+  left: 1rem;
+  top: 1rem;
+}
+
+/* Fine film-grain overlay used behind hero / dark sections for texture
+   instead of flat, sterile color fields. */
+.grain-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+/* Custom checkbox: native controls stay OS-gray even with accent-color
+   set on the unchecked state, which reads as unstyled against the brand
+   surfaces — draw a small gold-on-check box instead. */
+.gold-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.05rem;
+  height: 1.05rem;
+  flex-shrink: 0;
+  border: 1.5px solid var(--field-border);
+  background: var(--field-bg);
+  position: relative;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+.gold-checkbox:hover {
+  border-color: var(--color-gold-dim);
+}
+.gold-checkbox:checked {
+  background: var(--color-gold);
+  border-color: var(--color-gold);
+}
+.gold-checkbox:checked::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
+  border: solid var(--color-mahogany-2);
+  border-width: 0 2px 2px 0;
+  transform: rotate(40deg);
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+.text-pretty {
+  text-wrap: pretty;
+}
+
+/* Scroll-reveal: content fades and lifts into place as it enters the
+   viewport (see <Reveal> in components/ui.tsx). Starts pre-rendered at
+   full opacity so it never disappears if JS fails to hydrate — the
+   IntersectionObserver adds `.reveal` (hidden) then flips to
+   `.reveal-visible` once it has actually seen the element in view. */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.8s cubic-bezier(0.16, 0.8, 0.24, 1),
+    transform 0.8s cubic-bezier(0.16, 0.8, 0.24, 1);
+}
+.reveal-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
 }
