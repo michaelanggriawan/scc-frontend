@@ -45,6 +45,7 @@ export interface AddOn {
   name: string;
   description: string;
   status: EntityStatus;
+  order: number;
 }
 
 export interface PaymentProof {

@@ -36,6 +36,18 @@ export default function AdminAddonsPage() {
     load();
   }
 
+  async function move(index: number, direction: -1 | 1) {
+    if (!addons) return;
+    const target = index + direction;
+    if (target < 0 || target >= addons.length) return;
+    const reordered = [...addons];
+    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    await api.patch("/admin/addons/reorder", {
+      ids: reordered.map((a) => a.id),
+    });
+    load();
+  }
+
   return (
     <>
       <AdminHeader title="Add-ons">
@@ -67,7 +79,7 @@ export default function AdminAddonsPage() {
             <table className="w-full min-w-[560px]">
               <thead>
                 <tr className="border-b border-[var(--surface-border)] bg-cream">
-                  {["Name", "Description", "Status", ""].map((h) => (
+                  {["", "Name", "Description", "Status", ""].map((h) => (
                     <th
                       key={h}
                       className="text-left text-[10px] font-semibold text-gold-dim uppercase tracking-wider px-5 py-3.5"
@@ -78,7 +90,7 @@ export default function AdminAddonsPage() {
                 </tr>
               </thead>
               <tbody>
-                {addons.map((a) => (
+                {addons.map((a, idx) => (
                   <Fragment key={a.id}>
                     <tr
                       onClick={() => setOpenId(openId === a.id ? null : a.id)}
@@ -86,6 +98,35 @@ export default function AdminAddonsPage() {
                         openId === a.id ? "bg-cream" : ""
                       }`}
                     >
+                      <td
+                        className="px-3 py-4"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex flex-col items-center gap-0.5">
+                          <button
+                            onClick={() => move(idx, -1)}
+                            disabled={idx === 0}
+                            className={
+                              idx === 0
+                                ? "text-[var(--text-muted)] opacity-30 cursor-not-allowed"
+                                : "text-[var(--text-muted)] hover:text-ink cursor-pointer"
+                            }
+                          >
+                            <Icon name="chevronUp" className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => move(idx, 1)}
+                            disabled={idx === addons.length - 1}
+                            className={
+                              idx === addons.length - 1
+                                ? "text-[var(--text-muted)] opacity-30 cursor-not-allowed"
+                                : "text-[var(--text-muted)] hover:text-ink cursor-pointer"
+                            }
+                          >
+                            <Icon name="chevronDown" className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
                       <td className="px-5 py-4 text-sm font-semibold text-ink">
                         {a.name}
                       </td>
@@ -109,7 +150,7 @@ export default function AdminAddonsPage() {
                     </tr>
                     {openId === a.id && (
                       <tr>
-                        <td colSpan={4} className="p-0">
+                        <td colSpan={5} className="p-0">
                           <div className="border-t border-[var(--surface-border)] bg-cream p-7">
                             <AddonForm
                               initial={a}
@@ -133,7 +174,7 @@ export default function AdminAddonsPage() {
                 ))}
                 {addons.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-5 py-10 text-center text-sm text-[var(--text-muted)]">
+                    <td colSpan={5} className="px-5 py-10 text-center text-sm text-[var(--text-muted)]">
                       No add-ons yet.
                     </td>
                   </tr>
