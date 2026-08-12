@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { Alert, Btn, OutlineBtn, PhotoBox } from "./ui";
 import { api, ApiError, fileUrl, rupiah } from "@/lib/api";
+import {
+  defaultDueDateLocal,
+  fromDatetimeLocal,
+  toDatetimeLocal,
+} from "@/lib/datetime";
 import { blockNonDigitKeys, blockNonDigitPaste } from "@/lib/validation";
 import type { AddOn, Inquiry, Room } from "@/lib/types";
 
@@ -44,7 +49,9 @@ export function AdminInquiryPanel({
     setRoomId(d.roomId ?? "");
     setAddonIds(d.addonIds ?? []);
     setPrice(d.agreedPrice != null ? String(d.agreedPrice) : "");
-    setDueDate(d.paymentDueDate ?? "");
+    setDueDate(
+      d.paymentDueDate ? toDatetimeLocal(d.paymentDueDate) : defaultDueDateLocal(),
+    );
     setAdminNotes(d.adminNotes ?? "");
   }, [refId]);
 
@@ -270,6 +277,7 @@ export function AdminInquiryPanel({
                         roomId: roomId || null,
                         addonIds,
                         agreedPrice: price ? Number(price) : null,
+                        paymentDueDate: dueDate ? fromDatetimeLocal(dueDate) : undefined,
                         adminNotes,
                       }),
                     )
@@ -284,11 +292,15 @@ export function AdminInquiryPanel({
                       Payment Due Date
                     </span>
                     <input
-                      type="date"
+                      type="datetime-local"
+                      min={toDatetimeLocal(new Date().toISOString())}
                       value={dueDate}
                       onChange={(e) => setDueDate(e.target.value)}
                       className="border border-[#AAAAAA] bg-white h-10 px-3 text-sm"
                     />
+                    <span className="text-[10px] text-[#AAAAAA]">
+                      Defaults to 24 hours from now — adjust if needed.
+                    </span>
                   </label>
                   {inq.status !== "Awaiting Payment" ? (
                     <>
@@ -301,7 +313,7 @@ export function AdminInquiryPanel({
                               `/admin/inquiries/${inq.ref}/awaiting-payment`,
                               {
                                 agreedPrice: Number(price),
-                                paymentDueDate: dueDate,
+                                paymentDueDate: fromDatetimeLocal(dueDate),
                                 roomId: roomId || null,
                                 addonIds,
                                 adminNotes,

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui";
 import { api, ApiError, fileUrl, rupiah } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { formatDueDate } from "@/lib/datetime";
 import {
   isValidEmail,
   isValidPhone,
@@ -361,7 +362,7 @@ function BookingDetail({
                 {rupiah(pay.amount)}
               </p>
               <p className="text-[11px] text-[#888]">
-                Due by {inq.paymentDueDate || "—"}
+                Due by {formatDueDate(inq.paymentDueDate)}
               </p>
               <div className="mt-2 text-xs text-[#555]">
                 <p className="font-semibold">Transfer to:</p>

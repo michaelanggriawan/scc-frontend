@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Alert, Btn, IconBox, PhotoBox, Spinner } from "@/components/ui";
 import { api, ApiError, fileUrl, rupiah } from "@/lib/api";
+import { formatDueDate } from "@/lib/datetime";
 import { isValidUploadSize, MAX_UPLOAD_MB } from "@/lib/validation";
 import type { PayPageData } from "@/lib/types";
 
@@ -97,7 +98,7 @@ export default function PayPage() {
           </div>
           <div className="flex justify-between text-xs">
             <span className="text-[#888]">Due By</span>
-            <span className="text-[#333]">{data.dueDate ?? "—"}</span>
+            <span className="text-[#333]">{formatDueDate(data.dueDate)}</span>
           </div>
 
           <div className="border border-[#D1D1D1] bg-[#FAFAFA] px-4 py-3 mt-1">
