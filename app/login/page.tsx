@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { NavBar } from "@/components/site";
 import { Alert, Btn, TextField } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
@@ -11,6 +11,8 @@ import { ApiError } from "@/lib/api";
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -22,7 +24,7 @@ export default function LoginPage() {
     setBusy(true);
     try {
       const user = await login(email, password);
-      router.push(user.role === "admin" ? "/admin" : "/profile");
+      router.push(next || (user.role === "admin" ? "/admin" : "/"));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Login failed.");
     } finally {
@@ -41,12 +43,15 @@ export default function LoginPage() {
           <div>
             <h1 className="text-xl font-bold text-[#222] mb-1">Log In</h1>
             <p className="text-sm text-[#666]">
-              Access your bookings and payment tracking.
+              {next === "/booking"
+                ? "Log in to submit your inquiry — your form details are saved and will be filled in when you come back."
+                : "Access your bookings and payment tracking."}
             </p>
           </div>
           <TextField
             label="Email Address"
             type="email"
+            placeholder="e.g. jane@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -54,6 +59,7 @@ export default function LoginPage() {
           <TextField
             label="Password"
             type="password"
+            placeholder="Your password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -64,7 +70,10 @@ export default function LoginPage() {
           </Btn>
           <p className="text-xs text-center text-[#666]">
             Don&apos;t have an account?{" "}
-            <Link href="/register" className="font-semibold text-[#222] underline">
+            <Link
+              href={next ? `/register?next=${encodeURIComponent(next)}` : "/register"}
+              className="font-semibold text-[#222] underline"
+            >
               Sign Up
             </Link>
           </p>

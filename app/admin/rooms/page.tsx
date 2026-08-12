@@ -1,6 +1,12 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useState,
+  type InputHTMLAttributes,
+} from "react";
 import { AdminHeader } from "@/components/admin-header";
 import { Alert, Btn, OutlineBtn, Spinner, StatusPill } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
@@ -191,6 +197,10 @@ function RoomForm({
 
   async function save() {
     setErr("");
+    if (!d.name.trim()) {
+      setErr("Room name is required.");
+      return;
+    }
     setBusy(true);
     try {
       await onSave(d);
@@ -204,9 +214,25 @@ function RoomForm({
   return (
     <div className="flex flex-col gap-5 max-w-2xl">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Field label="Room Name" value={d.name} onChange={(v) => setD({ ...d, name: v })} />
-        <Field label="Capacity" value={d.capacity} onChange={(v) => setD({ ...d, capacity: v })} />
-        <Field label="Area" value={d.area} onChange={(v) => setD({ ...d, area: v })} />
+        <Field
+          label="Room Name"
+          placeholder="e.g. Grand Ballroom"
+          required
+          value={d.name}
+          onChange={(v) => setD({ ...d, name: v })}
+        />
+        <Field
+          label="Capacity"
+          placeholder="e.g. 500 pax"
+          value={d.capacity}
+          onChange={(v) => setD({ ...d, capacity: v })}
+        />
+        <Field
+          label="Area"
+          placeholder="e.g. 1,200 sqm"
+          value={d.area}
+          onChange={(v) => setD({ ...d, area: v })}
+        />
       </div>
       <div className="flex items-center gap-3">
         <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
@@ -227,6 +253,7 @@ function RoomForm({
         <textarea
           value={d.description}
           onChange={(e) => setD({ ...d, description: e.target.value })}
+          placeholder="Describe the room, its features, and ideal use cases…"
           className="border border-[#AAAAAA] bg-white px-3 py-2 text-sm min-h-[70px]"
         />
       </label>
@@ -318,7 +345,7 @@ function RoomForm({
 
       {err && <Alert>{err}</Alert>}
       <div className="flex gap-2">
-        <Btn sm onClick={save} disabled={busy}>
+        <Btn sm onClick={save} disabled={busy || !d.name.trim()}>
           Save Room
         </Btn>
         <OutlineBtn sm onClick={onCancel}>
@@ -341,11 +368,12 @@ function Field({
   label,
   value,
   onChange,
+  ...rest
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
-}) {
+} & Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">) {
   return (
     <label className="flex flex-col gap-1">
       <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
@@ -354,6 +382,7 @@ function Field({
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        {...rest}
         className="border border-[#AAAAAA] bg-white h-10 px-3 text-sm"
       />
     </label>

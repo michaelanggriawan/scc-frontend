@@ -133,8 +133,9 @@ export function SWrap({
 // Labelled text input
 export function TextField({
   label,
+  error,
   ...props
-}: { label: string } & InputHTMLAttributes<HTMLInputElement>) {
+}: { label: string; error?: string } & InputHTMLAttributes<HTMLInputElement>) {
   return (
     <label className="flex flex-col gap-1">
       <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
@@ -142,16 +143,22 @@ export function TextField({
       </span>
       <input
         {...props}
-        className="border border-[#AAAAAA] bg-white h-10 px-3 text-sm text-[#333] placeholder:text-[#AAAAAA] focus:border-[#222] outline-none"
+        className={`border bg-white h-10 px-3 text-sm text-[#333] placeholder:text-[#AAAAAA] outline-none ${
+          error
+            ? "border-[#c33] focus:border-[#c33]"
+            : "border-[#AAAAAA] focus:border-[#222]"
+        }`}
       />
+      {error && <span className="text-xs text-[#c33]">{error}</span>}
     </label>
   );
 }
 
 export function TextArea({
   label,
+  error,
   ...props
-}: { label: string } & TextareaHTMLAttributes<HTMLTextAreaElement>) {
+}: { label: string; error?: string } & TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <label className="flex flex-col gap-1">
       <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
@@ -159,8 +166,13 @@ export function TextArea({
       </span>
       <textarea
         {...props}
-        className="border border-[#AAAAAA] bg-white px-3 py-2 text-sm text-[#333] min-h-[100px] placeholder:text-[#AAAAAA] focus:border-[#222] outline-none"
+        className={`border bg-white px-3 py-2 text-sm text-[#333] min-h-[100px] placeholder:text-[#AAAAAA] outline-none ${
+          error
+            ? "border-[#c33] focus:border-[#c33]"
+            : "border-[#AAAAAA] focus:border-[#222]"
+        }`}
       />
+      {error && <span className="text-xs text-[#c33]">{error}</span>}
     </label>
   );
 }

@@ -2,15 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { NavBar } from "@/components/site";
 import { Alert, Btn, TextField } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { ApiError } from "@/lib/api";
+import { isValidEmail, isValidPhone, validatePassword } from "@/lib/validation";
 
 export default function RegisterPage() {
   const { register } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next");
   const [form, setForm] = useState({
     fullName: "",
     email: "",
@@ -27,10 +30,23 @@ export default function RegisterPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (!isValidEmail(form.email)) {
+      setError("Please provide a valid email address.");
+      return;
+    }
+    if (form.phone.trim() && !isValidPhone(form.phone)) {
+      setError("Please provide a valid phone number.");
+      return;
+    }
+    const passwordError = validatePassword(form.password);
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
     setBusy(true);
     try {
       await register(form);
-      router.push("/profile");
+      router.push(next || "/profile");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Registration failed.");
     } finally {
@@ -49,18 +65,45 @@ export default function RegisterPage() {
           <div>
             <h1 className="text-xl font-bold text-[#222] mb-1">Create Account</h1>
             <p className="text-sm text-[#666]">
-              Register to submit and track your bookings.
+              {next === "/booking"
+                ? "Sign up to submit your inquiry — your form details are saved and will be filled in when you come back."
+                : "Register to submit and track your bookings."}
             </p>
           </div>
-          <TextField label="Full Name" value={form.fullName} onChange={set("fullName")} required />
-          <TextField label="Email Address" type="email" value={form.email} onChange={set("email")} required />
+          <TextField
+            label="Full Name"
+            placeholder="e.g. Jane Doe"
+            value={form.fullName}
+            onChange={set("fullName")}
+            required
+          />
+          <TextField
+            label="Email Address"
+            type="email"
+            placeholder="e.g. jane@email.com"
+            value={form.email}
+            onChange={set("email")}
+            required
+          />
           <div className="grid grid-cols-2 gap-4">
-            <TextField label="Phone" value={form.phone} onChange={set("phone")} />
-            <TextField label="Company" value={form.company} onChange={set("company")} />
+            <TextField
+              label="Phone"
+              type="tel"
+              placeholder="e.g. 0812 3456 7890"
+              value={form.phone}
+              onChange={set("phone")}
+            />
+            <TextField
+              label="Company"
+              placeholder="e.g. PT Acme Indonesia"
+              value={form.company}
+              onChange={set("company")}
+            />
           </div>
           <TextField
             label="Password"
             type="password"
+            placeholder="Min 8 chars, upper, lower, number & symbol"
             value={form.password}
             onChange={set("password")}
             required
@@ -72,7 +115,10 @@ export default function RegisterPage() {
           </Btn>
           <p className="text-xs text-center text-[#666]">
             Already have an account?{" "}
-            <Link href="/login" className="font-semibold text-[#222] underline">
+            <Link
+              href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}
+              className="font-semibold text-[#222] underline"
+            >
               Log In
             </Link>
           </p>
