@@ -10,6 +10,15 @@ import { useAuth } from "@/lib/auth";
 import { ApiError } from "@/lib/api";
 import { isValidEmail, isValidPhone, validatePassword } from "@/lib/validation";
 
+export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterForm />
+    </Suspense>
+  );
+}
+
+function RegisterForm() {
 function RegisterContent() {
   const { register } = useAuth();
   const router = useRouter();
