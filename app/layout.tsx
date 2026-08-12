@@ -1,20 +1,12 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Outfit } from "next/font/google";
+// Self-hosted fonts (bundled, no build-time network). We deliberately avoid
+// next/font/google here: it downloads the fonts from fonts.googleapis.com at
+// build time, which fails in sandboxed CI/deploy builds (e.g. Railway).
+import "@fontsource-variable/outfit";
+import "@fontsource-variable/playfair-display";
+import "@fontsource-variable/playfair-display/wght-italic.css";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
-
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  variable: "--font-display",
-  weight: ["500", "600", "700", "800", "900"],
-  style: ["normal", "italic"],
-});
-
-const outfit = Outfit({
-  subsets: ["latin"],
-  variable: "--font-sans",
-  weight: ["300", "400", "500", "600", "700"],
-});
 
 export const metadata: Metadata = {
   title: "SCC Venue — Serpong Convention Center",
@@ -28,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" data-scroll-behavior="smooth" className={`${playfair.variable} ${outfit.variable} h-full`}>
+    <html lang="en" data-scroll-behavior="smooth" className="h-full">
       <body className="min-h-full flex flex-col bg-mahogany-2">
         <a href="#main" className="skip-link">
           Skip to content

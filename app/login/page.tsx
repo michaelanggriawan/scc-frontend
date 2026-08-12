@@ -18,6 +18,7 @@ export default function LoginPage() {
 }
 
 function LoginForm() {
+function LoginContent() {
   const { login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -113,5 +114,15 @@ function LoginForm() {
         </div>
       </main>
     </div>
+  );
+}
+
+// useSearchParams() forces a client bailout that must sit under a Suspense
+// boundary, or the static build of /login fails.
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
   );
 }

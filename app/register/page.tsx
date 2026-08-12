@@ -19,6 +19,7 @@ export default function RegisterPage() {
 }
 
 function RegisterForm() {
+function RegisterContent() {
   const { register } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -158,5 +159,15 @@ function RegisterForm() {
         </div>
       </main>
     </div>
+  );
+}
+
+// useSearchParams() forces a client bailout that must sit under a Suspense
+// boundary, or the static build of /register fails.
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={null}>
+      <RegisterContent />
+    </Suspense>
   );
 }

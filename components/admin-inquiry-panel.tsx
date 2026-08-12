@@ -13,6 +13,23 @@ import type { AddOn, Inquiry, Room } from "@/lib/types";
 
 const EDITABLE = ["New Inquiry", "Awaiting Payment", "Payment Rejected"];
 
+// Inline preview of an uploaded proof, served through the API at /files/<key>.
+// Uses a plain <img> (arbitrary API-served file, not a build-time asset) and
+// falls back to a generic icon for PDFs or if the image can't load.
+function ProofThumb({ url, alt }: { url: string; alt: string }) {
+  const [broken, setBroken] = useState(false);
+  if (broken) return <Icon name="image" className="w-5 h-5" />;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt={alt}
+      className="w-full h-full object-cover"
+      onError={() => setBroken(true)}
+    />
+  );
+}
+
 export function AdminInquiryPanel({
   refId,
   rooms,
@@ -126,9 +143,12 @@ export function AdminInquiryPanel({
                   href={fileUrl(inq.proofs[0].fileUrl)}
                   target="_blank"
                   rel="noreferrer"
-                  className="w-16 h-12 flex-shrink-0 flex items-center justify-center border border-gold-dim/50 bg-mahogany-2 text-gold hover:border-gold transition-colors"
+                  className="w-16 h-12 flex-shrink-0 flex items-center justify-center overflow-hidden border border-gold-dim/50 bg-mahogany-2 text-gold hover:border-gold transition-colors"
                 >
-                  <Icon name="image" className="w-5 h-5" />
+                  <ProofThumb
+                    url={fileUrl(inq.proofs[0].fileUrl)}
+                    alt={inq.proofs[0].fileName}
+                  />
                 </a>
                 <div className="text-xs text-[var(--text-muted)]">
                   <p className="text-ink">{inq.proofs[0].fileName}</p>
