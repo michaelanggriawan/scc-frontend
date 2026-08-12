@@ -85,7 +85,7 @@ export default function AdminRoomsPage() {
           {adding ? "Cancel" : "Add room"}
         </Btn>
       </AdminHeader>
-      <div className="px-8 py-8 flex flex-col gap-6">
+      <div className="px-4 md:px-8 py-6 md:py-8 flex flex-col gap-6">
         {adding && (
           <div className="bg-white border border-[var(--surface-border)] p-7">
             <p className="font-display text-lg text-ink mb-5">New room</p>

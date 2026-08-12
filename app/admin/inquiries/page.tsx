@@ -72,7 +72,7 @@ export default function AdminInquiriesPage() {
   return (
     <>
       <AdminHeader title="Inquiries" />
-      <div className="px-8 py-8 flex flex-col gap-6">
+      <div className="px-4 md:px-8 py-6 md:py-8 flex flex-col gap-6">
         <div className="bg-white border border-[var(--surface-border)] p-6">
           <div className="flex items-center gap-2 mb-5">
             <Icon name="filter" className="w-4 h-4 text-gold-dim" />

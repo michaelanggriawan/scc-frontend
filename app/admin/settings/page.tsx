@@ -39,7 +39,7 @@ export default function AdminSettingsPage() {
   return (
     <>
       <AdminHeader title="Settings" />
-      <div className="px-8 py-8 flex flex-col gap-8 max-w-2xl">
+      <div className="px-4 md:px-8 py-6 md:py-8 flex flex-col gap-8 max-w-2xl">
         <VenueSection initial={venue} />
         <PaymentSection initial={payment} />
         <NotifSection initial={notif} />
@@ -106,7 +106,7 @@ function VenueSection({ initial }: { initial: VenueInfo }) {
         value={v.address}
         onChange={(e) => setV({ ...v, address: e.target.value })}
       />
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <TextField
           label="Phone"
           type="tel"
@@ -171,7 +171,7 @@ function PaymentSection({ initial }: { initial: PaymentInfo }) {
         value={p.bankName}
         onChange={(e) => setP({ ...p, bankName: e.target.value })}
       />
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <TextField
           label="Account number"
           inputMode="numeric"
@@ -199,7 +199,7 @@ function PaymentSection({ initial }: { initial: PaymentInfo }) {
         <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.12em]">
           Payment QR (QRIS)
         </span>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           {p.qrImageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
