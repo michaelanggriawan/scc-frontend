@@ -21,6 +21,8 @@ export default function AdminAddonsPage() {
   const [addons, setAddons] = useState<AddOn[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setAddons(await api.get<AddOn[]>("/admin/addons"));
@@ -36,12 +38,12 @@ export default function AdminAddonsPage() {
     load();
   }
 
-  async function move(index: number, direction: -1 | 1) {
-    if (!addons) return;
-    const target = index + direction;
-    if (target < 0 || target >= addons.length) return;
+  async function reorder(from: number, to: number) {
+    if (!addons || from === to) return;
     const reordered = [...addons];
-    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    const [moved] = reordered.splice(from, 1);
+    reordered.splice(to, 0, moved);
+    setAddons(reordered);
     await api.patch("/admin/addons/reorder", {
       ids: reordered.map((a) => a.id),
     });
@@ -79,9 +81,9 @@ export default function AdminAddonsPage() {
             <table className="w-full min-w-[560px]">
               <thead>
                 <tr className="border-b border-[var(--surface-border)] bg-cream">
-                  {["", "Name", "Description", "Status", ""].map((h) => (
+                  {["", "Name", "Description", "Status", ""].map((h, i) => (
                     <th
-                      key={h}
+                      key={i}
                       className="text-left text-[10px] font-semibold text-gold-dim uppercase tracking-wider px-5 py-3.5"
                     >
                       {h}
@@ -94,37 +96,43 @@ export default function AdminAddonsPage() {
                   <Fragment key={a.id}>
                     <tr
                       onClick={() => setOpenId(openId === a.id ? null : a.id)}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        if (dragIndex !== null && overIndex !== idx) setOverIndex(idx);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (dragIndex !== null) reorder(dragIndex, idx);
+                        setDragIndex(null);
+                        setOverIndex(null);
+                      }}
                       className={`border-b border-[var(--surface-border)] cursor-pointer hover:bg-cream/60 transition-colors ${
                         openId === a.id ? "bg-cream" : ""
+                      } ${dragIndex === idx ? "opacity-40" : ""} ${
+                        overIndex === idx && dragIndex !== idx
+                          ? "border-t-2 border-t-gold"
+                          : ""
                       }`}
                     >
                       <td
                         className="px-3 py-4"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <div className="flex flex-col items-center gap-0.5">
-                          <button
-                            onClick={() => move(idx, -1)}
-                            disabled={idx === 0}
-                            className={
-                              idx === 0
-                                ? "text-[var(--text-muted)] opacity-30 cursor-not-allowed"
-                                : "text-[var(--text-muted)] hover:text-ink cursor-pointer"
-                            }
-                          >
-                            <Icon name="chevronUp" className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => move(idx, 1)}
-                            disabled={idx === addons.length - 1}
-                            className={
-                              idx === addons.length - 1
-                                ? "text-[var(--text-muted)] opacity-30 cursor-not-allowed"
-                                : "text-[var(--text-muted)] hover:text-ink cursor-pointer"
-                            }
-                          >
-                            <Icon name="chevronDown" className="w-3.5 h-3.5" />
-                          </button>
+                        <div
+                          draggable
+                          onDragStart={(e) => {
+                            e.stopPropagation();
+                            e.dataTransfer.effectAllowed = "move";
+                            setDragIndex(idx);
+                          }}
+                          onDragEnd={() => {
+                            setDragIndex(null);
+                            setOverIndex(null);
+                          }}
+                          className="flex items-center justify-center text-[var(--text-muted)] hover:text-ink cursor-grab active:cursor-grabbing"
+                          title="Drag to reorder"
+                        >
+                          <Icon name="gripVertical" className="w-4 h-4" />
                         </div>
                       </td>
                       <td className="px-5 py-4 text-sm font-semibold text-ink">
