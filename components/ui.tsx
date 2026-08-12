@@ -259,6 +259,27 @@ const ICON_PATHS: Record<string, ReactNode> = {
       <circle cx="15" cy="18" r="1.15" fill="currentColor" stroke="none" />
     </>
   ),
+  eye: (
+    <>
+      <path
+        d="M2.5 12S5.7 5.5 12 5.5 21.5 12 21.5 12 18.3 18.5 12 18.5 2.5 12 2.5 12Z"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  ),
+  eyeOff: (
+    <>
+      <path
+        d="M9.9 5.7A10.4 10.4 0 0 1 12 5.5c6.5 0 9.5 6.5 9.5 6.5a15.7 15.7 0 0 1-3.1 4M6.5 6.9C4 8.7 2.5 12 2.5 12s3 6.5 9.5 6.5a9.6 9.6 0 0 0 3.3-.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" strokeLinecap="round" />
+      <path d="M3.5 3.5l17 17" strokeLinecap="round" />
+    </>
+  ),
 };
 
 export function Icon({
@@ -482,25 +503,42 @@ export function TextField({
   label,
   error,
   className = '',
+  type,
   ...props
 }: {
   label: string;
   error?: string;
   className?: string;
 } & InputHTMLAttributes<HTMLInputElement>) {
+  const [reveal, setReveal] = useState(false);
+  const isPassword = type === 'password';
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.12em]">
         {label}
       </span>
-      <input
-        {...props}
-        className={`border bg-[var(--field-bg)] h-11 px-3.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--field-placeholder)] outline-none transition-colors duration-150 ${
-          error
-            ? 'border-danger focus:border-danger'
-            : 'border-[var(--field-border)] focus:border-gold'
-        } ${className}`}
-      />
+      <div className="relative">
+        <input
+          {...props}
+          type={isPassword ? (reveal ? 'text' : 'password') : type}
+          className={`border bg-[var(--field-bg)] h-11 px-3.5 ${isPassword ? 'pr-11' : ''} w-full text-sm text-[var(--text-primary)] placeholder:text-[var(--field-placeholder)] outline-none transition-colors duration-150 ${
+            error
+              ? 'border-danger focus:border-danger'
+              : 'border-[var(--field-border)] focus:border-gold'
+          } ${className}`}
+        />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setReveal((r) => !r)}
+            tabIndex={-1}
+            aria-label={reveal ? 'Hide password' : 'Show password'}
+            className="absolute inset-y-0 right-0 flex items-center px-3 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+          >
+            <Icon name={reveal ? 'eyeOff' : 'eye'} className="w-4.5 h-4.5" />
+          </button>
+        )}
+      </div>
       {error && <span className="text-xs text-danger">{error}</span>}
     </label>
   );
