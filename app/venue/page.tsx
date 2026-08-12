@@ -74,10 +74,6 @@ export default function VenuePage() {
                 </Reveal>
               ))}
             </div>
-            <p className="text-sm text-ink/70">
-              Special rate: starting from{" "}
-              <span className="font-display text-lg text-mahogany">Rp 20,000,000</span>
-            </p>
           </div>
         </div>
 
