@@ -2,53 +2,65 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import type { VenueInfo } from '@/lib/types';
-import { Btn, IconBox, PhotoBox } from './ui';
+import { Btn, Icon } from './ui';
+
+const NAV_LINKS = [
+  ['Home', '/'],
+  ['Venue', '/venue'],
+  ['Booking', '/booking'],
+] as const;
 
 export function NavBar() {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
 
   return (
-    <nav className="h-16 bg-white border-b border-[#D1D1D1] flex items-center px-6 md:px-16 gap-8 sticky top-0 z-40">
-      <Link href="/">
-        <PhotoBox label="[ SCC ]" className="w-28 h-8" />
+    <nav className="relative h-20 bg-white/95 backdrop-blur border-b border-mahogany/10 flex items-center justify-between px-6 md:px-16 gap-8 sticky top-0 z-40">
+      <Link href="/" className="flex items-center gap-3 flex-shrink-0">
+        <Image src="/logo-hd.png" alt="SCC Serpong" width={168} height={112} className="h-12 w-auto object-contain" priority />
       </Link>
-      <div className="flex-1 flex justify-center gap-6 md:gap-10">
-        {[
-          ['Home', '/'],
-          ['Venue', '/venue'],
-          ['Booking', '/booking'],
-        ].map(([label, href]) => (
-          <Link
-            key={label}
-            href={href}
-            className="text-sm text-[#333] hover:text-black"
-          >
-            {label}
-          </Link>
-        ))}
+      <div className="hidden md:flex items-center gap-10 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+        {NAV_LINKS.map(([label, href]) => {
+          const active = pathname === href;
+          return (
+            <Link
+              key={label}
+              href={href}
+              className={`relative text-base tracking-wide py-1 transition-colors ${
+                active ? 'text-mahogany' : 'text-ink/65 hover:text-ink'
+              }`}
+            >
+              {label}
+              {active && (
+                <span className="absolute -bottom-1 left-0 right-0 h-px bg-gold" />
+              )}
+            </Link>
+          );
+        })}
       </div>
-      <div className="flex items-center gap-3">
+      <div className="hidden md:flex items-center gap-3 flex-shrink-0">
         {user ? (
           <>
             {user.role === 'admin' && (
               <Link
                 href="/admin"
-                className="text-xs font-semibold text-[#555] underline"
+                className="text-xs font-semibold text-mahogany hover:text-cherry tracking-wide"
               >
                 Admin
               </Link>
             )}
             <Link
               href="/profile"
-              className="flex items-center gap-2 border border-[#D1D1D1] bg-white px-3 py-1.5 text-xs font-semibold text-[#333]"
+              className="flex items-center gap-2 border border-mahogany/20 bg-transparent px-3.5 py-2 text-xs font-semibold text-ink hover:border-gold transition-colors"
             >
-              <IconBox className="w-5 h-5" />
+              <Icon name="user" className="w-4 h-4 text-gold-dim" />
               {user.fullName || user.email}
             </Link>
             <button
@@ -56,7 +68,7 @@ export function NavBar() {
                 logout();
                 router.push('/');
               }}
-              className="text-xs text-[#888] underline cursor-pointer"
+              className="text-xs text-ink/50 hover:text-mahogany cursor-pointer transition-colors"
             >
               Log out
             </button>
@@ -67,6 +79,56 @@ export function NavBar() {
           </Btn>
         )}
       </div>
+      <button
+        className="md:hidden ml-auto text-mahogany"
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Toggle menu"
+        aria-expanded={open}
+      >
+        <Icon name={open ? 'close' : 'menu'} className="w-6 h-6" />
+      </button>
+
+      {open && (
+        <div className="md:hidden absolute top-20 left-0 right-0 bg-white border-b border-mahogany/10 flex flex-col px-6 py-6 gap-5 z-40 shadow-lg">
+          {NAV_LINKS.map(([label, href]) => (
+            <Link
+              key={label}
+              href={href}
+              onClick={() => setOpen(false)}
+              className={`text-sm ${pathname === href ? 'text-mahogany font-semibold' : 'text-ink/75'}`}
+            >
+              {label}
+            </Link>
+          ))}
+          <div className="h-px bg-mahogany/10" />
+          {user ? (
+            <>
+              {user.role === 'admin' && (
+                <Link href="/admin" onClick={() => setOpen(false)} className="text-sm text-mahogany">
+                  Admin
+                </Link>
+              )}
+              <Link href="/profile" onClick={() => setOpen(false)} className="text-sm text-ink/75">
+                {user.fullName || user.email}
+              </Link>
+              <button
+                onClick={() => {
+                  logout();
+                  setOpen(false);
+                  router.push('/');
+                }}
+                className="text-sm text-left text-ink/50"
+              >
+                Log out
+              </button>
+            </>
+          ) : (
+            <Btn sm onClick={() => { setOpen(false); router.push('/login'); }}>
+              Login
+            </Btn>
+          )}
+        </div>
+      )}
     </nav>
   );
 }
@@ -98,19 +160,19 @@ export function FloatingWA() {
       target="_blank"
       rel="noopener noreferrer"
       aria-disabled={!href}
-      className={`fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2 ${
+      className={`fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2 group ${
         href ? '' : 'pointer-events-none opacity-50'
       }`}
     >
-      <div className="bg-white border border-[#D1D1D1] px-3 py-1.5 text-xs text-[#555] shadow-sm">
+      <div className="bg-mahogany border border-gold-dim/60 px-3 py-1.5 text-xs text-custard shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
         Chat with us on WhatsApp
       </div>
-      <div className="w-14 h-14 cursor-pointer">
+      <div className="w-14 h-14 cursor-pointer rounded-full bg-[linear-gradient(155deg,var(--color-gold-light),var(--color-gold))] p-2.5 shadow-[0_8px_24px_-6px_rgba(0,0,0,0.5)] transition-transform hover:scale-105">
         <Image
           src="/WhatsApp.webp"
           alt="Chat with us on WhatsApp"
-          width={56}
-          height={56}
+          width={40}
+          height={40}
           className="w-full h-full object-contain"
         />
       </div>
@@ -124,64 +186,78 @@ export function Footer() {
     api.get<VenueInfo>('/public/venue-info').then(setVenue).catch(() => {});
   }, []);
 
+  const socials = [
+    ['instagram', venue?.instagram],
+    ['facebook', venue?.facebook],
+    ['linkedin', venue?.linkedin],
+    ['youtube', venue?.youtube],
+  ] as const;
+
   return (
-    <footer className="bg-[#2B2B2B] px-6 md:px-16 py-12">
-      <div className="max-w-screen-xl mx-auto">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-10">
-          <div>
-            <p className="text-[10px] font-semibold text-[#999] uppercase tracking-widest mb-4">
-              Contact Info
+    <footer className="scc-dark relative bg-mahogany-2 border-t border-[var(--surface-border)] px-6 md:px-16 pt-16 pb-8 overflow-hidden">
+      <div className="grain-overlay" />
+      <div className="relative max-w-screen-xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
+          <div className="col-span-2 md:col-span-1">
+            <Image src="/logo-hd.png" alt="SCC Serpong" width={168} height={112} className="h-10 w-auto object-contain" />
+            <p className="text-xs text-custard/50 mt-3 leading-relaxed max-w-xs">
+              A column-free convention hall in the heart of Tangerang, built for
+              events that deserve full attention.
             </p>
-            <div className="flex flex-col gap-2 text-sm text-[#BBBBBB]">
-              <span>{venue?.name || 'SCC Venue'}</span>
-              <span>{venue?.address || '—'}</span>
-              <span>{venue?.phone || '—'}</span>
-              <span>{venue?.email || '—'}</span>
-              {venue?.whatsapp && (
-                <span className="text-xs text-[#888]">
-                  WhatsApp: {venue.whatsapp}
-                </span>
-              )}
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold text-gold uppercase tracking-[0.2em] mb-4">
+              Contact
+            </p>
+            <div className="flex flex-col gap-2.5 text-sm text-custard/70">
+              <span className="flex items-start gap-2">
+                <Icon name="mapPin" className="w-4 h-4 mt-0.5 text-gold-dim flex-shrink-0" />
+                {venue?.address || venue?.name || 'SCC Venue'}
+              </span>
+              <span className="flex items-center gap-2">
+                <Icon name="phone" className="w-4 h-4 text-gold-dim flex-shrink-0" />
+                {venue?.phone || '—'}
+              </span>
+              <span className="flex items-center gap-2">
+                <Icon name="mail" className="w-4 h-4 text-gold-dim flex-shrink-0" />
+                {venue?.email || '—'}
+              </span>
             </div>
           </div>
           <div>
-            <p className="text-[10px] font-semibold text-[#999] uppercase tracking-widest mb-4">
+            <p className="text-[10px] font-semibold text-gold uppercase tracking-[0.2em] mb-4">
               Quick Links
             </p>
-            <div className="flex flex-col gap-2 text-sm text-[#BBBBBB]">
-              <Link href="/" className="hover:text-white">
+            <div className="flex flex-col gap-2.5 text-sm text-custard/70">
+              <Link href="/" className="hover:text-gold transition-colors">
                 Home
               </Link>
-              <Link href="/venue" className="hover:text-white">
+              <Link href="/venue" className="hover:text-gold transition-colors">
                 Venue Detail
               </Link>
-              <Link href="/booking" className="hover:text-white">
+              <Link href="/booking" className="hover:text-gold transition-colors">
                 Booking
               </Link>
             </div>
           </div>
           <div>
-            <p className="text-[10px] font-semibold text-[#999] uppercase tracking-widest mb-4">
+            <p className="text-[10px] font-semibold text-gold uppercase tracking-[0.2em] mb-4">
               Follow Us
             </p>
-            <div className="flex flex-col gap-2 text-sm text-[#BBBBBB]">
-              <span>{venue?.instagram || 'Instagram'}</span>
-              <span>{venue?.facebook || 'Facebook'}</span>
-              <span>{venue?.linkedin || 'LinkedIn'}</span>
-              <span>{venue?.youtube || 'YouTube'}</span>
+            <div className="flex items-center gap-3">
+              {socials.map(([name]) => (
+                <span
+                  key={name}
+                  className="w-9 h-9 flex items-center justify-center border border-[var(--surface-border-strong)] text-gold-dim hover:text-gold hover:border-gold transition-colors"
+                >
+                  <Icon name={name} className="w-4 h-4" />
+                </span>
+              ))}
             </div>
           </div>
-          <div>
-            <p className="text-[10px] font-semibold text-[#999] uppercase tracking-widest mb-4">
-              Resources
-            </p>
-            <span className="text-sm text-[#BBBBBB]">
-              Venue Floorplan &amp; Tech Specs (PDF)
-            </span>
-          </div>
         </div>
-        <div className="border-t border-white/10 pt-6 text-xs text-[#777]">
-          © {new Date().getFullYear()} SCC Venue. All rights reserved.
+        <div className="border-t border-[var(--surface-border)] pt-6 text-xs text-custard/40">
+          © {new Date().getFullYear()} Serpong Convention Center. All rights reserved.
         </div>
       </div>
     </footer>
