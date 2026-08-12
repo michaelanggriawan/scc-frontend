@@ -1,8 +1,17 @@
 "use client";
 
-import { useEffect, useState, type InputHTMLAttributes } from "react";
+import { useEffect, useState } from "react";
 import { AdminHeader } from "@/components/admin-header";
-import { Alert, Btn, Spinner } from "@/components/ui";
+import {
+  Alert,
+  Btn,
+  Icon,
+  PhotoBox,
+  SLabel,
+  Spinner,
+  TextArea,
+  TextField,
+} from "@/components/ui";
 import { api, ApiError, fileUrl } from "@/lib/api";
 import {
   blockNonDigitKeys,
@@ -30,7 +39,7 @@ export default function AdminSettingsPage() {
   return (
     <>
       <AdminHeader title="Settings" />
-      <div className="px-8 py-8 flex flex-col gap-10 max-w-2xl">
+      <div className="px-8 py-8 flex flex-col gap-8 max-w-2xl">
         <VenueSection initial={venue} />
         <PaymentSection initial={payment} />
         <NotifSection initial={notif} />
@@ -59,31 +68,6 @@ function useSaver() {
   return { msg, err, setErr, busy, save };
 }
 
-function Row({
-  label,
-  value,
-  onChange,
-  ...rest
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-} & Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">) {
-  return (
-    <label className="flex flex-col gap-1">
-      <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
-        {label}
-      </span>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        {...rest}
-        className="border border-[#AAAAAA] bg-white h-10 px-3 text-sm"
-      />
-    </label>
-  );
-}
-
 function VenueSection({ initial }: { initial: VenueInfo }) {
   const [v, setV] = useState(initial);
   const { msg, err, setErr, busy, save } = useSaver();
@@ -105,50 +89,51 @@ function VenueSection({ initial }: { initial: VenueInfo }) {
   }
 
   return (
-    <div className="bg-white border border-[#D1D1D1] p-6 flex flex-col gap-5">
-      <h2 className="text-sm font-bold text-[#222] border-b border-[#D1D1D1] pb-3">
-        Venue Info
-      </h2>
-      <Row
-        label="Venue Name"
+    <div className="bg-white border border-[var(--surface-border)] p-7 flex flex-col gap-5">
+      <div>
+        <SLabel>Venue</SLabel>
+        <h2 className="font-display text-2xl text-ink">Venue info</h2>
+      </div>
+      <TextField
+        label="Venue name"
         placeholder="e.g. Serpong Convention Center"
         value={v.name}
-        onChange={(x) => setV({ ...v, name: x })}
+        onChange={(e) => setV({ ...v, name: e.target.value })}
       />
-      <Row
+      <TextField
         label="Address"
         placeholder="e.g. Jl. Raya Serpong No. 1, Tangerang"
         value={v.address}
-        onChange={(x) => setV({ ...v, address: x })}
+        onChange={(e) => setV({ ...v, address: e.target.value })}
       />
       <div className="grid grid-cols-2 gap-4">
-        <Row
+        <TextField
           label="Phone"
           type="tel"
           placeholder="e.g. 021 5555 0000"
           value={v.phone}
-          onChange={(x) => setV({ ...v, phone: x })}
+          onChange={(e) => setV({ ...v, phone: e.target.value })}
         />
-        <Row
+        <TextField
           label="WhatsApp"
           type="tel"
           placeholder="e.g. +62 811 0000 0000"
           value={v.whatsapp}
-          onChange={(x) => setV({ ...v, whatsapp: x })}
+          onChange={(e) => setV({ ...v, whatsapp: e.target.value })}
         />
       </div>
-      <Row
+      <TextField
         label="Email"
         type="email"
         placeholder="e.g. info@venue.com"
         value={v.email}
-        onChange={(x) => setV({ ...v, email: x })}
+        onChange={(e) => setV({ ...v, email: e.target.value })}
       />
       {msg && <Alert kind="success">{msg}</Alert>}
       {err && <Alert>{err}</Alert>}
       <div>
         <Btn sm disabled={busy} onClick={submit}>
-          Save Venue Info
+          Save venue info
         </Btn>
       </div>
     </div>
@@ -175,58 +160,58 @@ function PaymentSection({ initial }: { initial: PaymentInfo }) {
   }
 
   return (
-    <div className="bg-white border border-[#D1D1D1] p-6 flex flex-col gap-5">
-      <h2 className="text-sm font-bold text-[#222] border-b border-[#D1D1D1] pb-3">
-        Payment Info
-      </h2>
-      <Row
-        label="Bank Name"
+    <div className="bg-white border border-[var(--surface-border)] p-7 flex flex-col gap-5">
+      <div>
+        <SLabel>Payment</SLabel>
+        <h2 className="font-display text-2xl text-ink">Payment info</h2>
+      </div>
+      <TextField
+        label="Bank name"
         placeholder="e.g. BCA"
         value={p.bankName}
-        onChange={(x) => setP({ ...p, bankName: x })}
+        onChange={(e) => setP({ ...p, bankName: e.target.value })}
       />
       <div className="grid grid-cols-2 gap-4">
-        <Row
-          label="Account Number"
+        <TextField
+          label="Account number"
           inputMode="numeric"
           placeholder="e.g. 1234567890"
           onKeyDown={blockNonDigitKeys}
           onPaste={blockNonDigitPaste}
           value={p.accountNumber}
-          onChange={(x) => setP({ ...p, accountNumber: x })}
+          onChange={(e) => setP({ ...p, accountNumber: e.target.value })}
         />
-        <Row
-          label="Account Name"
+        <TextField
+          label="Account name"
           placeholder="e.g. PT SCC Venue Indonesia"
           value={p.accountName}
-          onChange={(x) => setP({ ...p, accountName: x })}
+          onChange={(e) => setP({ ...p, accountName: e.target.value })}
         />
       </div>
-      <label className="flex flex-col gap-1">
-        <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
-          Instructions
-        </span>
-        <textarea
-          value={p.instructions}
-          onChange={(e) => setP({ ...p, instructions: e.target.value })}
-          placeholder="e.g. Transfer the exact amount and upload your receipt."
-          className="border border-[#AAAAAA] bg-white px-3 py-2 text-sm min-h-[60px]"
-        />
-      </label>
+      <TextArea
+        label="Instructions"
+        value={p.instructions}
+        onChange={(e) => setP({ ...p, instructions: e.target.value })}
+        placeholder="e.g. Transfer the exact amount and upload your receipt."
+        className="min-h-[60px]"
+      />
       <div className="flex flex-col gap-2">
-        <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
+        <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.12em]">
           Payment QR (QRIS)
         </span>
         <div className="flex items-center gap-4">
-          {p.qrImageUrl && (
+          {p.qrImageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={fileUrl(p.qrImageUrl)}
-              alt="QR"
-              className="w-24 h-24 object-contain border border-[#EBEBEB]"
+              alt="QR code"
+              className="w-24 h-24 object-contain border border-[var(--surface-border)] bg-white"
             />
+          ) : (
+            <PhotoBox icon="creditCard" label="No QR yet" className="w-24 h-24 flex-shrink-0" />
           )}
-          <label className="border border-dashed border-[#AAAAAA] px-4 py-3 text-xs text-[#888] cursor-pointer">
+          <label className="flex items-center gap-2 border border-dashed border-[var(--field-border)] px-4 py-3 text-xs text-[var(--text-muted)] cursor-pointer hover:border-gold transition-colors">
+            <Icon name="upload" className="w-4 h-4 text-gold flex-shrink-0" />
             {uploading ? "Uploading…" : `Upload QR image · Max ${MAX_UPLOAD_MB} MB`}
             <input
               type="file"
@@ -241,7 +226,7 @@ function PaymentSection({ initial }: { initial: PaymentInfo }) {
       {err && <Alert>{err}</Alert>}
       <div>
         <Btn sm disabled={busy} onClick={() => save(() => api.put("/admin/settings/payment", p))}>
-          Save Payment Info
+          Save payment info
         </Btn>
       </div>
     </div>
@@ -259,25 +244,32 @@ function NotifSection({ initial }: { initial: NotificationPrefs }) {
   const [n, setN] = useState(initial);
   const { msg, err, busy, save } = useSaver();
   return (
-    <div className="bg-white border border-[#D1D1D1] p-6 flex flex-col gap-4">
-      <h2 className="text-sm font-bold text-[#222] border-b border-[#D1D1D1] pb-3">
-        Notification Preferences
-      </h2>
-      {NOTIF_ITEMS.map((item) => (
-        <label key={item.key} className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={n[item.key]}
-            onChange={(e) => setN({ ...n, [item.key]: e.target.checked })}
-          />
-          <span className="text-sm text-[#333]">{item.label}</span>
-        </label>
-      ))}
+    <div className="bg-white border border-[var(--surface-border)] p-7 flex flex-col gap-4">
+      <div>
+        <SLabel>Notifications</SLabel>
+        <h2 className="font-display text-2xl text-ink">Notification preferences</h2>
+      </div>
+      <div className="flex flex-col gap-3 mt-1">
+        {NOTIF_ITEMS.map((item) => (
+          <label
+            key={item.key}
+            className="flex items-center gap-3 cursor-pointer border border-[var(--surface-border)] bg-[var(--field-bg)] px-4 py-3"
+          >
+            <input
+              type="checkbox"
+              checked={n[item.key]}
+              onChange={(e) => setN({ ...n, [item.key]: e.target.checked })}
+              className="gold-checkbox"
+            />
+            <span className="text-sm text-[var(--text-primary)]">{item.label}</span>
+          </label>
+        ))}
+      </div>
       {msg && <Alert kind="success">{msg}</Alert>}
       {err && <Alert>{err}</Alert>}
       <div>
         <Btn sm disabled={busy} onClick={() => save(() => api.put("/admin/settings/notifications", n))}>
-          Save Preferences
+          Save preferences
         </Btn>
       </div>
     </div>

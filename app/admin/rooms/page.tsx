@@ -5,10 +5,18 @@ import {
   useCallback,
   useEffect,
   useState,
-  type InputHTMLAttributes,
 } from "react";
 import { AdminHeader } from "@/components/admin-header";
-import { Alert, Btn, OutlineBtn, Spinner, StatusPill } from "@/components/ui";
+import {
+  Alert,
+  Btn,
+  Icon,
+  OutlineBtn,
+  Spinner,
+  StatusPill,
+  TextArea,
+  TextField,
+} from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import type { EntityStatus, Room, RoomSpec } from "@/lib/types";
 
@@ -73,13 +81,14 @@ export default function AdminRoomsPage() {
     <>
       <AdminHeader title="Rooms">
         <Btn sm onClick={() => setAdding((v) => !v)}>
-          {adding ? "Cancel" : "+ Add Room"}
+          <Icon name={adding ? "close" : "plus"} className="w-3.5 h-3.5" />
+          {adding ? "Cancel" : "Add room"}
         </Btn>
       </AdminHeader>
       <div className="px-8 py-8 flex flex-col gap-6">
         {adding && (
-          <div className="border border-[#222] bg-white p-6">
-            <p className="text-sm font-bold text-[#222] mb-4">New Room</p>
+          <div className="bg-white border border-[var(--surface-border)] p-7">
+            <p className="font-display text-lg text-ink mb-5">New room</p>
             <RoomForm
               initial={blank()}
               onSave={async (d) => {
@@ -95,14 +104,14 @@ export default function AdminRoomsPage() {
         {rooms === null ? (
           <Spinner />
         ) : (
-          <div className="bg-white border border-[#D1D1D1] overflow-x-auto">
-            <table className="w-full min-w-[600px]">
+          <div className="bg-white border border-[var(--surface-border)] overflow-x-auto">
+            <table className="w-full min-w-[640px]">
               <thead>
-                <tr className="border-b border-[#D1D1D1] bg-[#F0F0F0]">
-                  {["Room", "Capacity", "Area", "Status"].map((h) => (
+                <tr className="border-b border-[var(--surface-border)] bg-cream">
+                  {["Room", "Capacity", "Area", "Status", ""].map((h) => (
                     <th
                       key={h}
-                      className="text-left text-[10px] font-semibold text-[#666] uppercase tracking-wider px-5 py-3"
+                      className="text-left text-[10px] font-semibold text-gold-dim uppercase tracking-wider px-5 py-3.5"
                     >
                       {h}
                     </th>
@@ -114,17 +123,17 @@ export default function AdminRoomsPage() {
                   <Fragment key={room.id}>
                     <tr
                       onClick={() => setOpenId(openId === room.id ? null : room.id)}
-                      className={`border-b border-[#EBEBEB] cursor-pointer hover:bg-[#F5F5F5] ${
-                        openId === room.id ? "bg-[#F0F0F0]" : ""
+                      className={`border-b border-[var(--surface-border)] cursor-pointer hover:bg-cream/60 transition-colors ${
+                        openId === room.id ? "bg-cream" : ""
                       }`}
                     >
-                      <td className="px-5 py-4 text-sm font-bold text-[#222]">
+                      <td className="px-5 py-4 text-sm font-semibold text-ink">
                         {room.name || "[ Unnamed ]"}
                       </td>
-                      <td className="px-5 py-4 text-sm text-[#444]">
+                      <td className="px-5 py-4 text-sm text-[var(--text-muted)]">
                         {room.capacity}
                       </td>
-                      <td className="px-5 py-4 text-sm text-[#444]">
+                      <td className="px-5 py-4 text-sm text-[var(--text-muted)]">
                         {room.area}
                       </td>
                       <td
@@ -138,11 +147,14 @@ export default function AdminRoomsPage() {
                           <StatusPill status={room.status} />
                         </button>
                       </td>
+                      <td className="px-5 py-4 text-right">
+                        <Icon name="pencil" className="w-4 h-4 text-[var(--text-muted)] inline-block" />
+                      </td>
                     </tr>
                     {openId === room.id && (
                       <tr>
-                        <td colSpan={4} className="p-0">
-                          <div className="border-t border-[#D1D1D1] bg-[#F7F7F7] p-6">
+                        <td colSpan={5} className="p-0">
+                          <div className="border-t border-[var(--surface-border)] bg-cream p-7">
                             <RoomForm
                               initial={room}
                               onSave={async (d) => {
@@ -159,6 +171,13 @@ export default function AdminRoomsPage() {
                     )}
                   </Fragment>
                 ))}
+                {rooms.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-5 py-10 text-center text-sm text-[var(--text-muted)]">
+                      No rooms yet.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -214,31 +233,32 @@ function RoomForm({
   return (
     <div className="flex flex-col gap-5 max-w-2xl">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Field
-          label="Room Name"
+        <TextField
+          label="Room name"
           placeholder="e.g. Grand Ballroom"
           required
           value={d.name}
-          onChange={(v) => setD({ ...d, name: v })}
+          onChange={(e) => setD({ ...d, name: e.target.value })}
         />
-        <Field
+        <TextField
           label="Capacity"
           placeholder="e.g. 500 pax"
           value={d.capacity}
-          onChange={(v) => setD({ ...d, capacity: v })}
+          onChange={(e) => setD({ ...d, capacity: e.target.value })}
         />
-        <Field
+        <TextField
           label="Area"
           placeholder="e.g. 1,200 sqm"
           value={d.area}
-          onChange={(v) => setD({ ...d, area: v })}
+          onChange={(e) => setD({ ...d, area: e.target.value })}
         />
       </div>
       <div className="flex items-center gap-3">
-        <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
+        <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.12em]">
           Status
         </span>
         <button
+          className="cursor-pointer"
           onClick={() =>
             setD({ ...d, status: d.status === "Active" ? "Inactive" : "Active" })
           }
@@ -246,37 +266,34 @@ function RoomForm({
           <StatusPill status={d.status} />
         </button>
       </div>
-      <label className="flex flex-col gap-1">
-        <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
-          Description
-        </span>
-        <textarea
-          value={d.description}
-          onChange={(e) => setD({ ...d, description: e.target.value })}
-          placeholder="Describe the room, its features, and ideal use cases…"
-          className="border border-[#AAAAAA] bg-white px-3 py-2 text-sm min-h-[70px]"
-        />
-      </label>
+      <TextArea
+        label="Description"
+        value={d.description}
+        onChange={(e) => setD({ ...d, description: e.target.value })}
+        placeholder="Describe the room, its features, and ideal use cases…"
+        className="min-h-[70px]"
+      />
 
       {/* Facilities */}
       <div className="flex flex-col gap-2">
-        <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
+        <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.12em]">
           Facilities
         </span>
         <div className="flex flex-wrap gap-2">
           {d.facilities.map((f, i) => (
             <span
               key={i}
-              className="flex items-center gap-1 border border-[#D1D1D1] bg-white px-2 py-1 text-xs"
+              className="flex items-center gap-1.5 border border-[var(--surface-border)] bg-white px-2.5 py-1 text-xs text-ink"
             >
               {f}
               <button
                 onClick={() =>
                   setD({ ...d, facilities: d.facilities.filter((_, idx) => idx !== i) })
                 }
-                className="text-[#888] cursor-pointer"
+                className="text-[var(--text-muted)] hover:text-danger cursor-pointer"
+                aria-label={`Remove ${f}`}
               >
-                ×
+                <Icon name="close" className="w-3 h-3" />
               </button>
             </span>
           ))}
@@ -295,7 +312,7 @@ function RoomForm({
               }
             }}
             placeholder="Add a facility…"
-            className="flex-1 border border-[#AAAAAA] bg-white h-9 px-3 text-sm"
+            className="flex-1 border border-[var(--field-border)] bg-[var(--field-bg)] h-11 px-3.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--field-placeholder)] outline-none focus:border-gold transition-colors duration-150"
           />
           <OutlineBtn
             sm
@@ -306,6 +323,7 @@ function RoomForm({
               }
             }}
           >
+            <Icon name="plus" className="w-3.5 h-3.5" />
             Add
           </OutlineBtn>
         </div>
@@ -313,16 +331,16 @@ function RoomForm({
 
       {/* Specs */}
       <div className="flex flex-col gap-2">
-        <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
-          Production Specs
+        <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.12em]">
+          Production specs
         </span>
-        <div className="border border-[#D1D1D1] bg-white">
+        <div className="border border-[var(--surface-border)] bg-white">
           {d.specs.map((s, i) => (
             <div
               key={s.system}
-              className="flex items-center gap-2 border-b border-[#EBEBEB] last:border-0 px-3 py-2"
+              className="flex items-center gap-3 border-b border-[var(--surface-border)] last:border-0 px-4 py-2.5"
             >
-              <span className="text-xs font-bold text-[#333] w-36 flex-shrink-0">
+              <span className="text-xs font-semibold text-ink w-36 flex-shrink-0">
                 {s.system}
               </span>
               <input
@@ -336,7 +354,7 @@ function RoomForm({
                   })
                 }
                 placeholder="Specification…"
-                className="flex-1 border border-[#EBEBEB] bg-white text-xs px-2 py-1"
+                className="flex-1 border border-[var(--field-border)] bg-[var(--field-bg)] text-xs text-[var(--text-primary)] placeholder:text-[var(--field-placeholder)] px-3 py-1.5 outline-none focus:border-gold transition-colors duration-150"
               />
             </div>
           ))}
@@ -344,9 +362,9 @@ function RoomForm({
       </div>
 
       {err && <Alert>{err}</Alert>}
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2">
         <Btn sm onClick={save} disabled={busy || !d.name.trim()}>
-          Save Room
+          Save room
         </Btn>
         <OutlineBtn sm onClick={onCancel}>
           Cancel
@@ -354,37 +372,13 @@ function RoomForm({
         {onDelete && (
           <button
             onClick={onDelete}
-            className="text-xs text-[#a22] underline cursor-pointer ml-auto"
+            className="flex items-center gap-1.5 text-xs text-danger hover:underline cursor-pointer ml-auto"
           >
+            <Icon name="trash" className="w-3.5 h-3.5" />
             Delete
           </button>
         )}
       </div>
     </div>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  ...rest
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-} & Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">) {
-  return (
-    <label className="flex flex-col gap-1">
-      <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
-        {label}
-      </span>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        {...rest}
-        className="border border-[#AAAAAA] bg-white h-10 px-3 text-sm"
-      />
-    </label>
   );
 }

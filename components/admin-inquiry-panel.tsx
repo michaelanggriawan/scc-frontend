@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Btn, OutlineBtn, PhotoBox } from "./ui";
+import { Alert, Btn, Icon, OutlineBtn, Select, TextArea } from "./ui";
 import { api, ApiError, fileUrl, rupiah } from "@/lib/api";
 import {
   defaultDueDateLocal,
@@ -75,7 +75,7 @@ export function AdminInquiryPanel({
 
   if (!inq)
     return (
-      <div className="border-t border-[#D1D1D1] bg-[#F7F7F7] p-6 text-xs text-[#888]">
+      <div className="border-t border-[var(--surface-border)] bg-cream p-6 text-xs text-[var(--text-muted)]">
         Loading…
       </div>
     );
@@ -92,15 +92,16 @@ export function AdminInquiryPanel({
   );
 
   return (
-    <div className="border-t border-[#D1D1D1] bg-[#F7F7F7] p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div className="border-t border-[var(--surface-border)] bg-cream p-7 grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* Left: details + proof */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between mb-1">
-          <p className="text-sm font-bold text-[#222]">Inquiry — {inq.ref}</p>
+          <p className="font-display text-lg text-ink">Inquiry — {inq.ref}</p>
           <button
             onClick={onClose}
-            className="text-xs text-[#888] underline cursor-pointer"
+            className="flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-mahogany cursor-pointer"
           >
+            <Icon name="close" className="w-3.5 h-3.5" />
             Close
           </button>
         </div>
@@ -115,34 +116,34 @@ export function AdminInquiryPanel({
         )}
 
         {inq.status === "Payment Submitted" && (
-          <div className="mt-2 border border-[#D1D1D1] bg-white px-4 py-3">
-            <p className="text-xs font-semibold text-[#333] mb-2">
+          <div className="mt-2 border border-[var(--surface-border)] bg-white px-5 py-4">
+            <p className="text-xs font-semibold text-ink mb-3 uppercase tracking-wide">
               Proof of Payment
             </p>
             {inq.proofs && inq.proofs.length > 0 ? (
               <div className="flex items-center gap-3">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <a
                   href={fileUrl(inq.proofs[0].fileUrl)}
                   target="_blank"
                   rel="noreferrer"
+                  className="w-16 h-12 flex-shrink-0 flex items-center justify-center border border-gold-dim/50 bg-mahogany-2 text-gold hover:border-gold transition-colors"
                 >
-                  <PhotoBox label="[ View ]" className="w-16 h-12" />
+                  <Icon name="image" className="w-5 h-5" />
                 </a>
-                <div className="text-xs text-[#555]">
-                  <p>{inq.proofs[0].fileName}</p>
+                <div className="text-xs text-[var(--text-muted)]">
+                  <p className="text-ink">{inq.proofs[0].fileName}</p>
                   <a
                     href={fileUrl(inq.proofs[0].fileUrl)}
                     target="_blank"
                     rel="noreferrer"
-                    className="underline text-[#555]"
+                    className="text-mahogany hover:text-gold-dim underline"
                   >
                     Open file
                   </a>
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-[#888]">No file.</p>
+              <p className="text-xs text-[var(--text-muted)]">No file.</p>
             )}
             {!rejecting ? (
               <div className="flex gap-2 mt-4">
@@ -155,11 +156,12 @@ export function AdminInquiryPanel({
               </div>
             ) : (
               <div className="mt-3 flex flex-col gap-2">
-                <textarea
+                <TextArea
+                  label="Rejection Reason"
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder="Rejection reason — customer will see this"
-                  className="border border-[#AAAAAA] bg-white px-3 py-2 text-xs min-h-[60px]"
+                  placeholder="Customer will see this"
+                  className="min-h-[60px]"
                 />
                 <div className="flex gap-2">
                   <Btn
@@ -187,43 +189,34 @@ export function AdminInquiryPanel({
 
       {/* Right: admin actions */}
       <div className="flex flex-col gap-4">
-        <p className="text-sm font-bold text-[#222]">Admin Actions</p>
+        <p className="font-display text-lg text-ink">Admin Actions</p>
 
         {inq.status === "Cancelled" ? (
-          <div className="border border-[#AAAAAA] bg-white p-4 text-xs text-[#555]">
-            <p className="font-semibold text-[#888] uppercase mb-1">Cancelled</p>
+          <div className="border border-[var(--surface-border)] bg-white p-5 text-xs text-[var(--text-muted)]">
+            <p className="font-semibold text-mahogany uppercase mb-1 tracking-wide">Cancelled</p>
             <p>Cancelled by {inq.cancelledBy || "—"}</p>
             {inq.cancelReason && <p>Reason: {inq.cancelReason}</p>}
           </div>
         ) : (
-          <div className="border border-[#D1D1D1] bg-white p-4 flex flex-col gap-4">
+          <div className="border border-[var(--surface-border)] bg-white p-5 flex flex-col gap-4">
             {canEdit ? (
               <>
-                <label className="flex flex-col gap-1">
-                  <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
-                    Room
-                  </span>
-                  <select
-                    value={roomId}
-                    onChange={(e) => setRoomId(e.target.value)}
-                    className="border border-[#AAAAAA] bg-white h-10 px-3 text-sm"
-                  >
-                    <option value="">— none —</option>
-                    {selectableRooms.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <Select label="Room" value={roomId} onChange={(e) => setRoomId(e.target.value)}>
+                  <option value="">— none —</option>
+                  {selectableRooms.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </Select>
 
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.12em]">
                     Add-ons
                   </span>
-                  <div className="flex flex-col gap-2 border border-[#EBEBEB] p-3">
+                  <div className="flex flex-col gap-2 border border-[var(--field-border)] p-3">
                     {selectableAddons.length === 0 && (
-                      <span className="text-xs text-[#AAAAAA]">None</span>
+                      <span className="text-xs text-[var(--text-muted)]">None</span>
                     )}
                     {selectableAddons.map((a) => (
                       <label key={a.id} className="flex items-center gap-2 cursor-pointer">
@@ -231,15 +224,16 @@ export function AdminInquiryPanel({
                           type="checkbox"
                           checked={addonIds.includes(a.id)}
                           onChange={() => toggleAddon(a.id)}
+                          className="gold-checkbox"
                         />
-                        <span className="text-xs text-[#333]">{a.name}</span>
+                        <span className="text-xs text-ink">{a.name}</span>
                       </label>
                     ))}
                   </div>
                 </div>
 
-                <label className="flex flex-col gap-1">
-                  <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.12em]">
                     Agreed Price (IDR)
                   </span>
                   <input
@@ -251,21 +245,17 @@ export function AdminInquiryPanel({
                     onKeyDown={blockNonDigitKeys}
                     onPaste={blockNonDigitPaste}
                     placeholder="e.g. 75000000"
-                    className="border border-[#AAAAAA] bg-white h-10 px-3 text-sm"
+                    className="border border-[var(--field-border)] bg-[var(--field-bg)] h-11 px-3.5 text-sm text-ink outline-none focus:border-gold transition-colors"
                   />
                 </label>
 
-                <label className="flex flex-col gap-1">
-                  <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
-                    Admin Notes
-                  </span>
-                  <textarea
-                    value={adminNotes}
-                    onChange={(e) => setAdminNotes(e.target.value)}
-                    placeholder="Internal notes — not visible to the customer"
-                    className="border border-[#AAAAAA] bg-white px-3 py-2 text-sm min-h-[50px]"
-                  />
-                </label>
+                <TextArea
+                  label="Admin Notes"
+                  value={adminNotes}
+                  onChange={(e) => setAdminNotes(e.target.value)}
+                  placeholder="Internal notes — not visible to the customer"
+                  className="min-h-[50px]"
+                />
 
                 <OutlineBtn
                   full
@@ -286,9 +276,9 @@ export function AdminInquiryPanel({
                   Save Changes
                 </OutlineBtn>
 
-                <div className="border-t border-[#EBEBEB] pt-4 flex flex-col gap-2">
-                  <label className="flex flex-col gap-1">
-                    <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
+                <div className="border-t border-[var(--surface-border)] pt-4 flex flex-col gap-2">
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.12em]">
                       Payment Due Date
                     </span>
                     <input
@@ -296,9 +286,9 @@ export function AdminInquiryPanel({
                       min={toDatetimeLocal(new Date().toISOString())}
                       value={dueDate}
                       onChange={(e) => setDueDate(e.target.value)}
-                      className="border border-[#AAAAAA] bg-white h-10 px-3 text-sm"
+                      className="border border-[var(--field-border)] bg-[var(--field-bg)] h-11 px-3.5 text-sm text-ink outline-none focus:border-gold transition-colors"
                     />
-                    <span className="text-[10px] text-[#AAAAAA]">
+                    <span className="text-[10px] text-[var(--text-muted)]">
                       Defaults to 24 hours from now — adjust if needed.
                     </span>
                   </label>
@@ -326,13 +316,13 @@ export function AdminInquiryPanel({
                         Mark as Awaiting Payment
                       </Btn>
                       {!price.trim() && (
-                        <p className="text-[10px] text-[#AAAAAA]">
+                        <p className="text-[10px] text-[var(--text-muted)]">
                           Set an agreed price and due date first.
                         </p>
                       )}
                     </>
                   ) : (
-                    <p className="text-[10px] text-[#888]">
+                    <p className="text-[10px] text-[var(--text-muted)]">
                       Awaiting the customer&apos;s proof of payment. Use Save
                       Changes to correct the price or due date.
                     </p>
@@ -349,29 +339,30 @@ export function AdminInquiryPanel({
               </>
             ) : (
               <div className="flex flex-col gap-2 text-xs">
-                <p className="text-[10px] font-semibold text-[#444] uppercase">
+                <p className="text-[10px] font-semibold text-mahogany uppercase tracking-wide">
                   Terms Locked
                 </p>
                 <D label="Room" value={inq.room?.name} />
                 <D label="Price" value={rupiah(inq.agreedPrice)} />
-                <p className="text-[10px] text-[#AAAAAA]">
+                <p className="text-[10px] text-[var(--text-muted)]">
                   Terms lock once payment is submitted or confirmed.
                 </p>
               </div>
             )}
 
-            <div className="border-t border-[#EBEBEB] pt-4">
+            <div className="border-t border-[var(--surface-border)] pt-4">
               {!cancelling ? (
                 <OutlineBtn full sm onClick={() => setCancelling(true)}>
                   Cancel Inquiry
                 </OutlineBtn>
               ) : (
                 <div className="flex flex-col gap-2">
-                  <textarea
+                  <TextArea
+                    label="Reason (optional)"
                     value={cancelReason}
                     onChange={(e) => setCancelReason(e.target.value)}
                     placeholder="Reason (optional)"
-                    className="border border-[#AAAAAA] bg-white px-3 py-2 text-xs min-h-[50px]"
+                    className="min-h-[50px]"
                   />
                   <div className="flex gap-2">
                     <Btn
@@ -405,8 +396,8 @@ export function AdminInquiryPanel({
 function D({ label, value }: { label: string; value?: string | null }) {
   return (
     <div className="flex gap-4">
-      <span className="text-xs text-[#888] w-24 flex-shrink-0">{label}</span>
-      <span className="text-xs text-[#333] break-words">{value || "—"}</span>
+      <span className="text-xs text-[var(--text-muted)] w-24 flex-shrink-0">{label}</span>
+      <span className="text-xs text-ink break-words">{value || "—"}</span>
     </div>
   );
 }

@@ -2,7 +2,16 @@
 
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { AdminHeader } from "@/components/admin-header";
-import { Alert, Btn, OutlineBtn, Spinner, StatusPill } from "@/components/ui";
+import {
+  Alert,
+  Btn,
+  Icon,
+  OutlineBtn,
+  Spinner,
+  StatusPill,
+  TextArea,
+  TextField,
+} from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import type { AddOn, EntityStatus } from "@/lib/types";
 
@@ -31,13 +40,14 @@ export default function AdminAddonsPage() {
     <>
       <AdminHeader title="Add-ons">
         <Btn sm onClick={() => setAdding((v) => !v)}>
-          {adding ? "Cancel" : "+ Add Add-on"}
+          <Icon name={adding ? "close" : "plus"} className="w-3.5 h-3.5" />
+          {adding ? "Cancel" : "Add add-on"}
         </Btn>
       </AdminHeader>
       <div className="px-8 py-8 flex flex-col gap-6">
         {adding && (
-          <div className="border border-[#222] bg-white p-6">
-            <p className="text-sm font-bold text-[#222] mb-4">New Add-on</p>
+          <div className="bg-white border border-[var(--surface-border)] p-7">
+            <p className="font-display text-lg text-ink mb-5">New add-on</p>
             <AddonForm
               initial={{ name: "", description: "", status: "Active" }}
               onSave={async (d) => {
@@ -53,14 +63,14 @@ export default function AdminAddonsPage() {
         {addons === null ? (
           <Spinner />
         ) : (
-          <div className="bg-white border border-[#D1D1D1] overflow-x-auto">
+          <div className="bg-white border border-[var(--surface-border)] overflow-x-auto">
             <table className="w-full min-w-[560px]">
               <thead>
-                <tr className="border-b border-[#D1D1D1] bg-[#F0F0F0]">
-                  {["Name", "Description", "Status"].map((h) => (
+                <tr className="border-b border-[var(--surface-border)] bg-cream">
+                  {["Name", "Description", "Status", ""].map((h) => (
                     <th
                       key={h}
-                      className="text-left text-[10px] font-semibold text-[#666] uppercase tracking-wider px-5 py-3"
+                      className="text-left text-[10px] font-semibold text-gold-dim uppercase tracking-wider px-5 py-3.5"
                     >
                       {h}
                     </th>
@@ -72,14 +82,14 @@ export default function AdminAddonsPage() {
                   <Fragment key={a.id}>
                     <tr
                       onClick={() => setOpenId(openId === a.id ? null : a.id)}
-                      className={`border-b border-[#EBEBEB] cursor-pointer hover:bg-[#F5F5F5] ${
-                        openId === a.id ? "bg-[#F0F0F0]" : ""
+                      className={`border-b border-[var(--surface-border)] cursor-pointer hover:bg-cream/60 transition-colors ${
+                        openId === a.id ? "bg-cream" : ""
                       }`}
                     >
-                      <td className="px-5 py-4 text-sm font-bold text-[#222]">
+                      <td className="px-5 py-4 text-sm font-semibold text-ink">
                         {a.name}
                       </td>
-                      <td className="px-5 py-4 text-xs text-[#666] max-w-md truncate">
+                      <td className="px-5 py-4 text-xs text-[var(--text-muted)] max-w-md truncate">
                         {a.description}
                       </td>
                       <td
@@ -93,11 +103,14 @@ export default function AdminAddonsPage() {
                           <StatusPill status={a.status} />
                         </button>
                       </td>
+                      <td className="px-5 py-4 text-right">
+                        <Icon name="pencil" className="w-4 h-4 text-[var(--text-muted)] inline-block" />
+                      </td>
                     </tr>
                     {openId === a.id && (
                       <tr>
-                        <td colSpan={3} className="p-0">
-                          <div className="border-t border-[#D1D1D1] bg-[#F7F7F7] p-6">
+                        <td colSpan={4} className="p-0">
+                          <div className="border-t border-[var(--surface-border)] bg-cream p-7">
                             <AddonForm
                               initial={a}
                               onSave={async (d) => {
@@ -118,6 +131,13 @@ export default function AdminAddonsPage() {
                     )}
                   </Fragment>
                 ))}
+                {addons.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-5 py-10 text-center text-sm text-[var(--text-muted)]">
+                      No add-ons yet.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -164,34 +184,26 @@ function AddonForm({
 
   return (
     <div className="flex flex-col gap-4 max-w-xl">
-      <label className="flex flex-col gap-1">
-        <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
-          Name
-        </span>
-        <input
-          value={d.name}
-          onChange={(e) => setD({ ...d, name: e.target.value })}
-          placeholder="e.g. Extra LED Wall"
-          required
-          className="border border-[#AAAAAA] bg-white h-10 px-3 text-sm"
-        />
-      </label>
-      <label className="flex flex-col gap-1">
-        <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
-          Description
-        </span>
-        <textarea
-          value={d.description}
-          onChange={(e) => setD({ ...d, description: e.target.value })}
-          placeholder="Describe what's included…"
-          className="border border-[#AAAAAA] bg-white px-3 py-2 text-sm min-h-[70px]"
-        />
-      </label>
+      <TextField
+        label="Name"
+        value={d.name}
+        onChange={(e) => setD({ ...d, name: e.target.value })}
+        placeholder="e.g. Extra LED Wall"
+        required
+      />
+      <TextArea
+        label="Description"
+        value={d.description}
+        onChange={(e) => setD({ ...d, description: e.target.value })}
+        placeholder="Describe what's included…"
+        className="min-h-[70px]"
+      />
       <div className="flex items-center gap-3">
-        <span className="text-xs font-semibold text-[#444] uppercase tracking-wide">
+        <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.12em]">
           Status
         </span>
         <button
+          className="cursor-pointer"
           onClick={() =>
             setD({ ...d, status: d.status === "Active" ? "Inactive" : "Active" })
           }
@@ -200,9 +212,9 @@ function AddonForm({
         </button>
       </div>
       {err && <Alert>{err}</Alert>}
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2">
         <Btn sm onClick={save} disabled={busy || !d.name.trim()}>
-          Save Add-on
+          Save add-on
         </Btn>
         <OutlineBtn sm onClick={onCancel}>
           Cancel
@@ -210,8 +222,9 @@ function AddonForm({
         {onDelete && (
           <button
             onClick={onDelete}
-            className="text-xs text-[#a22] underline cursor-pointer ml-auto"
+            className="flex items-center gap-1.5 text-xs text-danger hover:underline cursor-pointer ml-auto"
           >
+            <Icon name="trash" className="w-3.5 h-3.5" />
             Delete
           </button>
         )}
