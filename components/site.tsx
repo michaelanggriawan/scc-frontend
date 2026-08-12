@@ -188,8 +188,6 @@ export function Footer() {
 
   const socials = [
     ['instagram', venue?.instagram],
-    ['facebook', venue?.facebook],
-    ['linkedin', venue?.linkedin],
     ['youtube', venue?.youtube],
   ] as const;
 
@@ -210,18 +208,50 @@ export function Footer() {
               Contact
             </p>
             <div className="flex flex-col gap-2.5 text-sm text-custard/70">
-              <span className="flex items-start gap-2">
-                <Icon name="mapPin" className="w-4 h-4 mt-0.5 text-gold-dim flex-shrink-0" />
-                {venue?.address || venue?.name || 'SCC Venue'}
-              </span>
-              <span className="flex items-center gap-2">
-                <Icon name="phone" className="w-4 h-4 text-gold-dim flex-shrink-0" />
-                {venue?.phone || '—'}
-              </span>
-              <span className="flex items-center gap-2">
-                <Icon name="mail" className="w-4 h-4 text-gold-dim flex-shrink-0" />
-                {venue?.email || '—'}
-              </span>
+              {venue?.address ? (
+                <a
+                  href={`https://maps.google.com/?q=${encodeURIComponent(venue.address)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-2 hover:text-gold transition-colors"
+                >
+                  <Icon name="mapPin" className="w-4 h-4 mt-0.5 text-gold-dim flex-shrink-0" />
+                  {venue.address}
+                </a>
+              ) : (
+                <span className="flex items-start gap-2">
+                  <Icon name="mapPin" className="w-4 h-4 mt-0.5 text-gold-dim flex-shrink-0" />
+                  {venue?.name || 'SCC Venue'}
+                </span>
+              )}
+              {venue?.phone ? (
+                <a
+                  href={`tel:${venue.phone}`}
+                  className="flex items-center gap-2 hover:text-gold transition-colors"
+                >
+                  <Icon name="phone" className="w-4 h-4 text-gold-dim flex-shrink-0" />
+                  {venue.phone}
+                </a>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <Icon name="phone" className="w-4 h-4 text-gold-dim flex-shrink-0" />
+                  —
+                </span>
+              )}
+              {venue?.email ? (
+                <a
+                  href={`mailto:${venue.email}`}
+                  className="flex items-center gap-2 hover:text-gold transition-colors"
+                >
+                  <Icon name="mail" className="w-4 h-4 text-gold-dim flex-shrink-0" />
+                  {venue.email}
+                </a>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <Icon name="mail" className="w-4 h-4 text-gold-dim flex-shrink-0" />
+                  —
+                </span>
+              )}
             </div>
           </div>
           <div>
