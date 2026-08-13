@@ -19,6 +19,7 @@ export interface User {
   company: string;
   role: UserRole;
   passwordChangedAt: string | null;
+  createdAt: string;
 }
 
 export interface RoomSpec {
