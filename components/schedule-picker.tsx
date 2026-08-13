@@ -65,6 +65,10 @@ export function DatePicker({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
+  const selected = value ? new Date(`${value}T00:00:00`) : undefined;
+  const minDate = new Date(`${min}T00:00:00`);
+  const [month, setMonth] = useState<Date>(selected ?? minDate);
+
   // Popover is portaled to <body> and positioned in viewport coordinates so
   // it can never get trapped behind a later sibling's stacking context (see
   // .reveal's `transform`, which creates one per form section). Since it's
@@ -72,7 +76,7 @@ export function DatePicker({
   // close to a viewport edge — flip/clamp against estimated panel size.
   useLayoutEffect(() => {
     if (!open || !triggerRef.current) return;
-    const PANEL_HEIGHT_ESTIMATE = 340;
+    const PANEL_HEIGHT_ESTIMATE = 380;
     const PANEL_WIDTH_ESTIMATE = 300;
     const rect = triggerRef.current.getBoundingClientRect();
     const spaceBelow = window.innerHeight - rect.bottom;
@@ -81,6 +85,10 @@ export function DatePicker({
     const top = openUpward ? rect.top - PANEL_HEIGHT_ESTIMATE - 8 : rect.bottom + 8;
     const left = Math.min(rect.left, window.innerWidth - PANEL_WIDTH_ESTIMATE - 8);
     setPanelPos({ top: Math.max(top, 8), left: Math.max(left, 8) });
+    setMonth(selected ?? minDate);
+    // Only re-sync when the popover freshly opens — otherwise this would
+    // fight the user's own prev/next-month navigation while it's open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   useEffect(() => {
@@ -102,9 +110,6 @@ export function DatePicker({
       window.removeEventListener("scroll", onScroll, true);
     };
   }, [open]);
-
-  const selected = value ? new Date(`${value}T00:00:00`) : undefined;
-  const minDate = new Date(`${min}T00:00:00`);
 
   const formatted = selected
     ? selected.toLocaleDateString("en-GB", {
@@ -146,7 +151,8 @@ export function DatePicker({
             <DayPicker
               mode="single"
               selected={selected}
-              defaultMonth={selected ?? minDate}
+              month={month}
+              onMonthChange={setMonth}
               disabled={{ before: minDate }}
               onSelect={(d) => {
                 if (!d) return;
@@ -157,6 +163,15 @@ export function DatePicker({
               classNames={dayPickerClassNames}
               components={{ Chevron: DayPickerChevron }}
             />
+            <div className="flex justify-center border-t border-[var(--surface-border)] py-2">
+              <button
+                type="button"
+                onClick={() => setMonth(new Date())}
+                className="text-xs font-semibold text-gold-dim hover:text-mahogany transition-colors duration-150 cursor-pointer"
+              >
+                Today
+              </button>
+            </div>
           </div>,
           document.body,
         )}
@@ -173,6 +188,10 @@ function minutesToY(min: number): number {
   return ((min - DAY_START_MIN) / 60) * PX_PER_HOUR;
 }
 
+function clampMinutes(min: number): number {
+  return Math.min(Math.max(min, DAY_START_MIN), DAY_END_MIN);
+}
+
 const HOUR_LABELS = (() => {
   const labels: number[] = [];
   for (let m = DAY_START_MIN; m < DAY_END_MIN; m += 60) labels.push(m);
@@ -187,16 +206,20 @@ function buildSlotStarts(): number[] {
 const SLOT_STARTS = buildSlotStarts();
 
 const TIMELINE_HEIGHT = minutesToY(DAY_END_MIN);
-const GUTTER_WIDTH = 52;
+const GUTTER_WIDTH = 58;
 
 // Vertical day timeline (like Google Calendar's week view): booked ranges
 // render as solid blocks, the current start-time + duration selection
 // renders as its own translucent block on top, so an overlap is visible at
 // a glance instead of only surfacing as a validation error after the fact.
+// A plain click sets just the start time (duration untouched); pressing,
+// dragging down, and releasing sets both the start time and the duration
+// spanned by the drag, snapped to whole hours.
 export function TimeSlotPicker({
   label,
   value,
   onChange,
+  onDurationChange,
   bookedRanges,
   loading,
   durationHours,
@@ -205,6 +228,7 @@ export function TimeSlotPicker({
   label: string;
   value: string; // "HH:MM"
   onChange: (time: string) => void;
+  onDurationChange: (hours: string) => void;
   bookedRanges: BookedRange[];
   loading?: boolean;
   durationHours: number;
@@ -214,13 +238,63 @@ export function TimeSlotPicker({
   const selStart = value ? parseTimeToMinutes(value) : null;
   const selEnd = selStart != null && durationHours > 0 ? selStart + durationHours * 60 : null;
 
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const dragStartRef = useRef<number | null>(null);
+  const dragRangeRef = useRef<{ start: number; end: number } | null>(null);
+  const didDragRef = useRef(false);
+  const [dragPreview, setDragPreview] = useState<{ start: number; end: number } | null>(null);
+
+  function yToMinutes(clientY: number): number {
+    const rect = timelineRef.current!.getBoundingClientRect();
+    const raw = DAY_START_MIN + ((clientY - rect.top) / PX_PER_HOUR) * 60;
+    return clampMinutes(Math.round(raw / SLOT_STEP_MIN) * SLOT_STEP_MIN);
+  }
+
+  function handleSlotMouseDown(startMin: number, booked: boolean) {
+    if (booked) return;
+    didDragRef.current = false;
+    dragStartRef.current = startMin;
+    dragRangeRef.current = { start: startMin, end: startMin + SLOT_STEP_MIN };
+    setDragPreview(dragRangeRef.current);
+
+    function onMove(ev: MouseEvent) {
+      // `cur` is a point on the grid (like the cursor's exact row), not a
+      // slot to include — releasing at the 11:00 line should end the
+      // selection at 11:00, not 11:30, so no extra slot-width is added here.
+      const cur = yToMinutes(ev.clientY);
+      if (cur !== dragStartRef.current) didDragRef.current = true;
+      const s = Math.min(dragStartRef.current!, cur);
+      const e = Math.max(dragStartRef.current!, cur);
+      dragRangeRef.current = { start: s, end: e };
+      setDragPreview(dragRangeRef.current);
+    }
+    function onUp() {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      if (didDragRef.current && dragRangeRef.current) {
+        const { start, end } = dragRangeRef.current;
+        const hours = Math.max(1, Math.round((end - start) / 60));
+        onChange(minutesToTime(start));
+        onDurationChange(String(hours));
+      }
+      setDragPreview(null);
+      dragStartRef.current = null;
+      dragRangeRef.current = null;
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }
+
   return (
     <div className="flex flex-col gap-1.5">
       <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.12em]">
         {label}
       </span>
+      <p className="text-[11px] text-ink/40">
+        Click a slot, or press and drag down to set the start time and duration together.
+      </p>
       <div
-        className={`relative border bg-[var(--field-bg)] max-h-[420px] overflow-y-auto ${
+        className={`relative border bg-[var(--field-bg)] max-h-[420px] overflow-y-auto select-none ${
           error ? "border-danger" : "border-[var(--field-border)]"
         } ${loading ? "opacity-50 pointer-events-none" : ""}`}
       >
@@ -230,7 +304,7 @@ export function TimeSlotPicker({
             {HOUR_LABELS.map((m) => (
               <span
                 key={m}
-                className="absolute right-2 -translate-y-1/2 text-[10px] text-ink/40 tabular-nums"
+                className="absolute right-2 -translate-y-1/2 text-[13px] font-medium text-ink/50 tabular-nums"
                 style={{ top: minutesToY(m) }}
               >
                 {minutesToTime(m)}
@@ -239,7 +313,7 @@ export function TimeSlotPicker({
           </div>
 
           {/* Timeline */}
-          <div className="relative flex-1 border-l border-[var(--surface-border)]">
+          <div ref={timelineRef} className="relative flex-1 border-l border-[var(--surface-border)]">
             {HOUR_LABELS.map((m) => (
               <div
                 key={m}
@@ -257,10 +331,10 @@ export function TimeSlotPicker({
               return (
                 <div
                   key={i}
-                  className="absolute inset-x-0.5 rounded-sm bg-danger/20 border border-danger/40 px-1.5 py-0.5 overflow-hidden"
+                  className="absolute inset-x-0.5 rounded-sm bg-danger/20 border border-danger/40 px-1.5 py-0.5 overflow-hidden pointer-events-none"
                   style={{ top, height }}
                 >
-                  <span className="text-[10px] font-medium text-danger/90 leading-tight">
+                  <span className="text-xs font-medium text-danger/90 leading-tight">
                     Booked {r.start}–{r.end}
                   </span>
                 </div>
@@ -279,7 +353,11 @@ export function TimeSlotPicker({
                   type="button"
                   disabled={booked}
                   title={booked ? "Already booked" : minutesToTime(m)}
-                  onClick={() => onChange(minutesToTime(m))}
+                  onMouseDown={() => handleSlotMouseDown(m, booked)}
+                  onClick={() => {
+                    if (didDragRef.current) return;
+                    onChange(minutesToTime(m));
+                  }}
                   className={`absolute inset-x-0 cursor-pointer transition-colors duration-100 ${
                     booked ? "cursor-not-allowed" : "hover:bg-gold/10"
                   }`}
@@ -288,7 +366,7 @@ export function TimeSlotPicker({
               );
             })}
 
-            {selStart != null && selEnd != null && (
+            {!dragPreview && selStart != null && selEnd != null && (
               <div
                 className={`absolute inset-x-0.5 rounded-sm border-2 pointer-events-none ${
                   overlap ? "bg-gold/40 border-danger" : "bg-gold/40 border-gold"
@@ -298,8 +376,22 @@ export function TimeSlotPicker({
                   height: Math.max(minutesToY(selEnd) - minutesToY(selStart), 4),
                 }}
               >
-                <span className="text-[10px] font-semibold text-mahogany-2 px-1.5 py-0.5 block">
+                <span className="text-xs font-semibold text-mahogany-2 px-1.5 py-0.5 block">
                   {value}–{minutesToTime(selEnd)}
+                </span>
+              </div>
+            )}
+
+            {dragPreview && (
+              <div
+                className="absolute inset-x-0.5 rounded-sm border-2 border-dashed border-gold bg-gold/30 pointer-events-none"
+                style={{
+                  top: minutesToY(dragPreview.start),
+                  height: Math.max(minutesToY(dragPreview.end) - minutesToY(dragPreview.start), 4),
+                }}
+              >
+                <span className="text-xs font-semibold text-mahogany-2 px-1.5 py-0.5 block">
+                  {minutesToTime(dragPreview.start)}–{minutesToTime(dragPreview.end)}
                 </span>
               </div>
             )}

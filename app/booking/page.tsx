@@ -417,6 +417,7 @@ export default function BookingPage() {
                     label="Start time"
                     value={time}
                     onChange={setTime}
+                    onDurationChange={setDuration}
                     bookedRanges={bookedRanges}
                     loading={availabilityLoading}
                     durationHours={Number(duration) || 0}
