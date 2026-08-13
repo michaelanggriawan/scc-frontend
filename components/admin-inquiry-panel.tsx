@@ -36,18 +36,17 @@ export function AdminInquiryPanel({
   addons,
   onChanged,
   onClose,
-  onPaymentLinkReady,
 }: {
   refId: string;
   rooms: Room[];
   addons: AddOn[];
   onChanged: () => void;
   onClose: () => void;
-  onPaymentLinkReady?: (ref: string, link: string) => void;
 }) {
   const [inq, setInq] = useState<Inquiry | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [copied, setCopied] = useState(false);
 
   // editable fields
   const [roomId, setRoomId] = useState("");
@@ -319,19 +318,15 @@ export function AdminInquiryPanel({
                         full
                         disabled={busy || !price.trim() || !dueDate}
                         onClick={() =>
-                          run(async () => {
-                            const res = await api.post<{ paymentLink: string }>(
-                              `/admin/inquiries/${inq.ref}/awaiting-payment`,
-                              {
-                                agreedPrice: Number(price),
-                                paymentDueDate: fromDatetimeLocal(dueDate),
-                                roomId: roomId || null,
-                                addonIds,
-                                adminNotes,
-                              },
-                            );
-                            onPaymentLinkReady?.(inq.ref, res.paymentLink);
-                          })
+                          run(() =>
+                            api.post(`/admin/inquiries/${inq.ref}/awaiting-payment`, {
+                              agreedPrice: Number(price),
+                              paymentDueDate: fromDatetimeLocal(dueDate),
+                              roomId: roomId || null,
+                              addonIds,
+                              adminNotes,
+                            }),
+                          )
                         }
                       >
                         Mark as Awaiting Payment
@@ -347,6 +342,35 @@ export function AdminInquiryPanel({
                       Awaiting the customer&apos;s proof of payment. Use Save
                       Changes to correct the price or due date.
                     </p>
+                  )}
+                  {inq.paymentLink && (
+                    <Alert kind={inq.paymentLink.expired ? "error" : "success"}>
+                      {inq.paymentLink.expired ? (
+                        "This payment link has expired."
+                      ) : (
+                        <>
+                          Payment link:{" "}
+                          <a
+                            href={inq.paymentLink.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="underline break-all"
+                          >
+                            {inq.paymentLink.url}
+                          </a>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(inq.paymentLink!.url);
+                              setCopied(true);
+                              setTimeout(() => setCopied(false), 1500);
+                            }}
+                            className="ml-3 underline cursor-pointer"
+                          >
+                            {copied ? "Copied!" : "Copy"}
+                          </button>
+                        </>
+                      )}
+                    </Alert>
                   )}
                 </div>
               </>
