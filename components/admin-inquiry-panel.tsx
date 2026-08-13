@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Btn, Icon, OutlineBtn, Select, TextArea } from "./ui";
 import { api, ApiError, fileUrl, rupiah } from "@/lib/api";
 import {
@@ -60,6 +60,12 @@ export function AdminInquiryPanel({
   const [cancelling, setCancelling] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
 
+  // Scrolls the payment-link alert into view right after it's generated —
+  // otherwise it can render below the fold relative to wherever the admin
+  // had scrolled to click the button, and looks like nothing happened.
+  const linkRef = useRef<HTMLDivElement>(null);
+  const [pendingLinkScroll, setPendingLinkScroll] = useState(false);
+
   const load = useCallback(async () => {
     const d = await api.get<Inquiry>(`/admin/inquiries/${refId}`);
     setInq(d);
@@ -75,6 +81,13 @@ export function AdminInquiryPanel({
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (pendingLinkScroll && linkRef.current) {
+      linkRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      setPendingLinkScroll(false);
+    }
+  }, [pendingLinkScroll]);
 
   async function run(fn: () => Promise<unknown>) {
     setErr("");
@@ -326,7 +339,7 @@ export function AdminInquiryPanel({
                               addonIds,
                               adminNotes,
                             }),
-                          )
+                          ).then(() => setPendingLinkScroll(true))
                         }
                       >
                         Mark as Awaiting Payment
@@ -344,33 +357,35 @@ export function AdminInquiryPanel({
                     </p>
                   )}
                   {inq.paymentLink && (
-                    <Alert kind={inq.paymentLink.expired ? "error" : "success"}>
-                      {inq.paymentLink.expired ? (
-                        "This payment link has expired."
-                      ) : (
-                        <>
-                          Payment link:{" "}
-                          <a
-                            href={inq.paymentLink.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="underline break-all"
-                          >
-                            {inq.paymentLink.url}
-                          </a>
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(inq.paymentLink!.url);
-                              setCopied(true);
-                              setTimeout(() => setCopied(false), 1500);
-                            }}
-                            className="ml-3 underline cursor-pointer"
-                          >
-                            {copied ? "Copied!" : "Copy"}
-                          </button>
-                        </>
-                      )}
-                    </Alert>
+                    <div ref={linkRef}>
+                      <Alert kind={inq.paymentLink.expired ? "error" : "success"}>
+                        {inq.paymentLink.expired ? (
+                          "This payment link has expired."
+                        ) : (
+                          <>
+                            Payment link:{" "}
+                            <a
+                              href={inq.paymentLink.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="underline break-all"
+                            >
+                              {inq.paymentLink.url}
+                            </a>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(inq.paymentLink!.url);
+                                setCopied(true);
+                                setTimeout(() => setCopied(false), 1500);
+                              }}
+                              className="ml-3 underline cursor-pointer"
+                            >
+                              {copied ? "Copied!" : "Copy"}
+                            </button>
+                          </>
+                        )}
+                      </Alert>
+                    </div>
                   )}
                 </div>
               </>
