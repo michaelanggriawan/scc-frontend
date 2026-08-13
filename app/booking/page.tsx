@@ -22,8 +22,6 @@ import { useAuth } from "@/lib/auth";
 import {
   blockNonDigitKeys,
   blockNonDigitPaste,
-  isValidEmail,
-  isValidPhone,
   minBookingDate,
 } from "@/lib/validation";
 import type { AddOn, Room } from "@/lib/types";
@@ -39,9 +37,6 @@ type Draft = {
   time: string;
   duration: string;
   notes: string;
-  name: string;
-  email: string;
-  phone: string;
 };
 
 function loadDraft(): Draft | null {
@@ -71,10 +66,7 @@ function clearDraft() {
 }
 
 type FieldErrors = Partial<
-  Record<
-    "category" | "room" | "date" | "time" | "duration" | "name" | "email" | "phone",
-    string
-  >
+  Record<"category" | "room" | "date" | "time" | "duration", string>
 >;
 
 export default function BookingPage() {
@@ -92,9 +84,6 @@ export default function BookingPage() {
   const [time, setTime] = useState("");
   const [duration, setDuration] = useState("");
   const [notes, setNotes] = useState("");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
 
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -115,9 +104,6 @@ export default function BookingPage() {
     setTime(draft.time ?? "");
     setDuration(draft.duration ?? "");
     setNotes(draft.notes ?? "");
-    setName(draft.name ?? "");
-    setEmail(draft.email ?? "");
-    setPhone(draft.phone ?? "");
   }, []);
 
   useEffect(() => {
@@ -141,15 +127,6 @@ export default function BookingPage() {
       .finally(() => setLoaded(true));
   }, []);
 
-  // Only fills in blanks — won't clobber a restored draft's contact info.
-  useEffect(() => {
-    if (user) {
-      setName((v) => v || user.fullName);
-      setEmail((v) => v || user.email);
-      setPhone((v) => v || user.phone);
-    }
-  }, [user]);
-
   function toggleAddon(id: string) {
     setAddonIds((prev) =>
       prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id],
@@ -168,13 +145,6 @@ export default function BookingPage() {
     const durationNum = Number(duration);
     if (!duration.trim() || !Number.isInteger(durationNum) || durationNum < 1) {
       errs.duration = "Duration must be a whole number of at least 1.";
-    }
-    if (!name.trim()) errs.name = "Please provide your full name.";
-    if (!email.trim() || !isValidEmail(email)) {
-      errs.email = "Please provide a valid email address.";
-    }
-    if (!phone.trim() || !isValidPhone(phone)) {
-      errs.phone = "Please provide a valid phone number.";
     }
     return errs;
   }
@@ -195,9 +165,6 @@ export default function BookingPage() {
       time,
       duration,
       notes,
-      name,
-      email,
-      phone,
     };
 
     // Require an account before an inquiry is actually created — save the
@@ -211,9 +178,9 @@ export default function BookingPage() {
     setSubmitting(true);
     try {
       const body = {
-        customerName: name,
-        customerEmail: email,
-        customerPhone: phone,
+        customerName: user.fullName,
+        customerEmail: user.email,
+        customerPhone: user.phone,
         roomId: roomId || null,
         addonIds,
         date,
@@ -423,38 +390,10 @@ export default function BookingPage() {
                 </FormSection>
               )}
 
-              {/* Contact + notes */}
-              <FormSection icon="user" title="Your details">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-                  <TextField
-                    label="Full name"
-                    placeholder="e.g. Jane Doe"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    error={showErrors("name")}
-                  />
-                  <TextField
-                    label="Email"
-                    type="email"
-                    placeholder="e.g. jane@email.com"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    error={showErrors("email")}
-                  />
-                  <TextField
-                    label="Phone"
-                    type="tel"
-                    placeholder="e.g. 0812 3456 7890"
-                    required
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    error={showErrors("phone")}
-                  />
-                </div>
+              {/* Notes */}
+              <FormSection icon="fileText" title="Notes">
                 <TextArea
-                  label="Notes / additional requests"
+                  label=""
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Describe your event requirements, technical needs, etc."
