@@ -47,7 +47,7 @@ function RegisterContent() {
     setBusy(true);
     try {
       await register(form);
-      router.push(next || "/profile");
+      router.push(next || "/");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Registration failed.");
     } finally {
