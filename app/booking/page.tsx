@@ -17,17 +17,11 @@ import {
   TextArea,
   TextField,
 } from "@/components/ui";
-import { DatePicker, TimeSlotPicker } from "@/components/schedule-picker";
+import { SchedulePicker } from "@/components/schedule-picker";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { overlapsBookedRange, snapToHalfHour } from "@/lib/datetime";
-import {
-  blockNonDigitKeys,
-  blockNonDigitPaste,
-  isValidEmail,
-  isValidPhone,
-  minBookingDate,
-} from "@/lib/validation";
+import { isValidEmail, isValidPhone, minBookingDate } from "@/lib/validation";
 import type { AddOn, BookedRange, Room } from "@/lib/types";
 
 const MIN_DATE = minBookingDate();
@@ -105,7 +99,6 @@ export default function BookingPage() {
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
 
   const [bookedRanges, setBookedRanges] = useState<BookedRange[]>([]);
-  const [availabilityLoading, setAvailabilityLoading] = useState(false);
 
   // Restore a draft saved before an unauthenticated user was sent to sign up.
   // Declared before the data-fetch effect below so it commits first and the
@@ -156,31 +149,6 @@ export default function BookingPage() {
       setPhone((v) => v || user.phone);
     }
   }, [user]);
-
-  useEffect(() => {
-    if (!roomId || !date) {
-      setBookedRanges([]);
-      return;
-    }
-    let cancelled = false;
-    setAvailabilityLoading(true);
-    api
-      .get<{ bookedRanges: BookedRange[] }>(
-        `/public/inquiries/availability?roomId=${encodeURIComponent(roomId)}&date=${encodeURIComponent(date)}`,
-      )
-      .then((res) => {
-        if (!cancelled) setBookedRanges(res.bookedRanges);
-      })
-      .catch(() => {
-        if (!cancelled) setBookedRanges([]);
-      })
-      .finally(() => {
-        if (!cancelled) setAvailabilityLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [roomId, date]);
 
   function toggleAddon(id: string) {
     setAddonIds((prev) =>
@@ -390,41 +358,19 @@ export default function BookingPage() {
 
               {/* Date/time */}
               <FormSection icon="calendar" title="Date & time">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <DatePicker
-                    label="Date"
-                    min={MIN_DATE}
-                    value={date}
-                    onChange={setDate}
-                    roomId={roomId}
-                    error={showErrors("date")}
-                  />
-                  <TextField
-                    label="Duration (hours)"
-                    type="number"
-                    min={1}
-                    step={1}
-                    required
-                    placeholder="e.g. 8"
-                    value={duration}
-                    onChange={(e) => setDuration(e.target.value)}
-                    onKeyDown={blockNonDigitKeys}
-                    onPaste={blockNonDigitPaste}
-                    error={showErrors("duration")}
-                  />
-                </div>
-                <div className="mt-4">
-                  <TimeSlotPicker
-                    label="Start time"
-                    value={time}
-                    onChange={setTime}
-                    onDurationChange={setDuration}
-                    bookedRanges={bookedRanges}
-                    loading={availabilityLoading}
-                    durationHours={Number(duration) || 0}
-                    error={showErrors("time")}
-                  />
-                </div>
+                <SchedulePicker
+                  date={date}
+                  time={time}
+                  onDateChange={setDate}
+                  onTimeChange={setTime}
+                  durationHours={Number(duration) || 0}
+                  onDurationChange={setDuration}
+                  min={MIN_DATE}
+                  roomId={roomId}
+                  dateError={showErrors("date")}
+                  timeError={showErrors("time")}
+                  onBookedRangesChange={setBookedRanges}
+                />
               </FormSection>
 
               {/* Add-ons */}
