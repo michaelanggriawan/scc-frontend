@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { AdminHeader } from "@/components/admin-header";
 import { AdminInquiryPanel } from "@/components/admin-inquiry-panel";
-import { Icon, StatusBadge, Spinner } from "@/components/ui";
+import { Alert, Icon, StatusBadge, Spinner } from "@/components/ui";
 import { api } from "@/lib/api";
 import type { AddOn, DashboardStats, Inquiry, Room } from "@/lib/types";
 
@@ -22,6 +22,7 @@ export default function AdminDashboard() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [addons, setAddons] = useState<AddOn[]>([]);
   const [openRef, setOpenRef] = useState<string | null>(null);
+  const [paymentNotice, setPaymentNotice] = useState<{ ref: string; link: string } | null>(null);
 
   const load = useCallback(async () => {
     const [s, c, list, r, a] = await Promise.all([
@@ -63,6 +64,25 @@ export default function AdminDashboard() {
     <>
       <AdminHeader title="Dashboard" />
       <div className="px-4 md:px-8 py-6 md:py-8 flex flex-col gap-6">
+        {paymentNotice && (
+          <Alert kind="success">
+            Payment link generated for {paymentNotice.ref}:{" "}
+            <a
+              href={paymentNotice.link}
+              target="_blank"
+              rel="noreferrer"
+              className="underline break-all"
+            >
+              {paymentNotice.link}
+            </a>
+            <button
+              onClick={() => setPaymentNotice(null)}
+              className="ml-3 underline cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </Alert>
+        )}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
           {cards.map(([icon, label, value]) => (
             <div
@@ -112,6 +132,7 @@ export default function AdminDashboard() {
             openRef={openRef}
             setOpenRef={setOpenRef}
             onChanged={load}
+            onPaymentLinkReady={(ref, link) => setPaymentNotice({ ref, link })}
           />
         </div>
       </div>
@@ -126,6 +147,7 @@ export function InquiryTable({
   openRef,
   setOpenRef,
   onChanged,
+  onPaymentLinkReady,
 }: {
   rows: Inquiry[];
   rooms: Room[];
@@ -133,6 +155,7 @@ export function InquiryTable({
   openRef: string | null;
   setOpenRef: (r: string | null) => void;
   onChanged: () => void;
+  onPaymentLinkReady?: (ref: string, link: string) => void;
 }) {
   const roomName = (id: string | null) =>
     rooms.find((r) => r.id === id)?.name ?? "—";
@@ -183,6 +206,7 @@ export function InquiryTable({
                       addons={addons}
                       onChanged={onChanged}
                       onClose={() => setOpenRef(null)}
+                      onPaymentLinkReady={onPaymentLinkReady}
                     />
                   </td>
                 </tr>

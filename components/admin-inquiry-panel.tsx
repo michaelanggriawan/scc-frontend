@@ -36,12 +36,14 @@ export function AdminInquiryPanel({
   addons,
   onChanged,
   onClose,
+  onPaymentLinkReady,
 }: {
   refId: string;
   rooms: Room[];
   addons: AddOn[];
   onChanged: () => void;
   onClose: () => void;
+  onPaymentLinkReady?: (ref: string, link: string) => void;
 }) {
   const [inq, setInq] = useState<Inquiry | null>(null);
   const [busy, setBusy] = useState(false);
@@ -58,7 +60,6 @@ export function AdminInquiryPanel({
   const [rejectReason, setRejectReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
-  const [link, setLink] = useState("");
 
   const load = useCallback(async () => {
     const d = await api.get<Inquiry>(`/admin/inquiries/${refId}`);
@@ -329,7 +330,7 @@ export function AdminInquiryPanel({
                                 adminNotes,
                               },
                             );
-                            setLink(res.paymentLink);
+                            onPaymentLinkReady?.(inq.ref, res.paymentLink);
                           })
                         }
                       >
@@ -346,14 +347,6 @@ export function AdminInquiryPanel({
                       Awaiting the customer&apos;s proof of payment. Use Save
                       Changes to correct the price or due date.
                     </p>
-                  )}
-                  {link && (
-                    <Alert kind="success">
-                      Payment link:{" "}
-                      <a href={link} target="_blank" rel="noreferrer" className="underline break-all">
-                        {link}
-                      </a>
-                    </Alert>
                   )}
                 </div>
               </>

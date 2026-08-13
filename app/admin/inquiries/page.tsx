@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AdminHeader } from "@/components/admin-header";
 import { InquiryTable } from "../page";
-import { Icon, OutlineBtn, Select, Spinner, TextField } from "@/components/ui";
+import { Alert, Icon, OutlineBtn, Select, Spinner, TextField } from "@/components/ui";
 import { api } from "@/lib/api";
 import type { AddOn, Inquiry, InquiryStatus, Room } from "@/lib/types";
 
@@ -30,6 +30,7 @@ export default function AdminInquiriesPage() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [addons, setAddons] = useState<AddOn[]>([]);
   const [openRef, setOpenRef] = useState<string | null>(null);
+  const [paymentNotice, setPaymentNotice] = useState<{ ref: string; link: string } | null>(null);
 
   const [status, setStatus] = useState("");
   const [search, setSearch] = useState("");
@@ -73,6 +74,25 @@ export default function AdminInquiriesPage() {
     <>
       <AdminHeader title="Inquiries" />
       <div className="px-4 md:px-8 py-6 md:py-8 flex flex-col gap-6">
+        {paymentNotice && (
+          <Alert kind="success">
+            Payment link generated for {paymentNotice.ref}:{" "}
+            <a
+              href={paymentNotice.link}
+              target="_blank"
+              rel="noreferrer"
+              className="underline break-all"
+            >
+              {paymentNotice.link}
+            </a>
+            <button
+              onClick={() => setPaymentNotice(null)}
+              className="ml-3 underline cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </Alert>
+        )}
         <div className="bg-white border border-[var(--surface-border)] p-6">
           <div className="flex items-center gap-2 mb-5">
             <Icon name="filter" className="w-4 h-4 text-gold-dim" />
@@ -142,6 +162,7 @@ export default function AdminInquiriesPage() {
               openRef={openRef}
               setOpenRef={setOpenRef}
               onChanged={load}
+              onPaymentLinkReady={(ref, link) => setPaymentNotice({ ref, link })}
             />
           )}
         </div>
