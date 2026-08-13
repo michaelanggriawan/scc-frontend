@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { AdminHeader } from "@/components/admin-header";
 import { InquiryTable } from "../page";
-import { Icon, OutlineBtn, Select, Spinner, TextField } from "@/components/ui";
+import { Btn, Icon, OutlineBtn, Select, Spinner, TextField } from "@/components/ui";
 import { api } from "@/lib/api";
 import type { AddOn, Inquiry, InquiryStatus, Room } from "@/lib/types";
 
@@ -71,7 +72,14 @@ export default function AdminInquiriesPage() {
 
   return (
     <>
-      <AdminHeader title="Inquiries" />
+      <AdminHeader title="Inquiries">
+        <Link href="/admin/inquiries/new">
+          <Btn sm>
+            <Icon name="plus" className="w-3.5 h-3.5" />
+            Add booking
+          </Btn>
+        </Link>
+      </AdminHeader>
       <div className="px-4 md:px-8 py-6 md:py-8 flex flex-col gap-6">
         <div className="bg-white border border-[var(--surface-border)] p-6">
           <div className="flex items-center gap-2 mb-5">
