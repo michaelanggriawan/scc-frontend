@@ -82,14 +82,6 @@ export default function AdminLayout({
         })}
       </nav>
       <div className="px-6 py-6 border-t border-custard/10 flex flex-col gap-3">
-        <Link
-          href="/"
-          onClick={() => setNavOpen(false)}
-          className="flex items-center gap-2 text-xs text-custard/45 hover:text-gold transition-colors"
-        >
-          <Icon name="arrowLeft" className="w-3.5 h-3.5" />
-          Public site
-        </Link>
         <button
           onClick={() => {
             logout();
