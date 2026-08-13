@@ -17,8 +17,10 @@ import {
   TextArea,
   TextField,
 } from "@/components/ui";
+import { DatePicker, TimeSlotPicker } from "@/components/schedule-picker";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { overlapsBookedRange } from "@/lib/datetime";
 import {
   blockNonDigitKeys,
   blockNonDigitPaste,
@@ -26,7 +28,7 @@ import {
   isValidPhone,
   minBookingDate,
 } from "@/lib/validation";
-import type { AddOn, Room } from "@/lib/types";
+import type { AddOn, BookedRange, Room } from "@/lib/types";
 
 const MIN_DATE = minBookingDate();
 const DRAFT_KEY = "scc_booking_draft";
@@ -102,6 +104,9 @@ export default function BookingPage() {
   const [successRef, setSuccessRef] = useState("");
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
 
+  const [bookedRanges, setBookedRanges] = useState<BookedRange[]>([]);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+
   // Restore a draft saved before an unauthenticated user was sent to sign up.
   // Declared before the data-fetch effect below so it commits first and the
   // room-preselect logic there can see the restored roomId.
@@ -150,6 +155,31 @@ export default function BookingPage() {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (!roomId || !date) {
+      setBookedRanges([]);
+      return;
+    }
+    let cancelled = false;
+    setAvailabilityLoading(true);
+    api
+      .get<{ bookedRanges: BookedRange[] }>(
+        `/public/inquiries/availability?roomId=${encodeURIComponent(roomId)}&date=${encodeURIComponent(date)}`,
+      )
+      .then((res) => {
+        if (!cancelled) setBookedRanges(res.bookedRanges);
+      })
+      .catch(() => {
+        if (!cancelled) setBookedRanges([]);
+      })
+      .finally(() => {
+        if (!cancelled) setAvailabilityLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [roomId, date]);
+
   function toggleAddon(id: string) {
     setAddonIds((prev) =>
       prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id],
@@ -168,6 +198,8 @@ export default function BookingPage() {
     const durationNum = Number(duration);
     if (!duration.trim() || !Number.isInteger(durationNum) || durationNum < 1) {
       errs.duration = "Duration must be a whole number of at least 1.";
+    } else if (time && overlapsBookedRange(time, durationNum, bookedRanges)) {
+      errs.time = "This time overlaps an existing booking. Please choose a different time or duration.";
     }
     if (!name.trim()) errs.name = "Please provide your full name.";
     if (!email.trim() || !isValidEmail(email)) {
@@ -356,23 +388,13 @@ export default function BookingPage() {
 
               {/* Date/time */}
               <FormSection icon="calendar" title="Date & time">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <TextField
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <DatePicker
                     label="Date"
-                    type="date"
                     min={MIN_DATE}
-                    required
                     value={date}
-                    onChange={(e) => setDate(e.target.value)}
+                    onChange={setDate}
                     error={showErrors("date")}
-                  />
-                  <TextField
-                    label="Start time"
-                    type="time"
-                    required
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    error={showErrors("time")}
                   />
                   <TextField
                     label="Duration (hours)"
@@ -386,6 +408,17 @@ export default function BookingPage() {
                     onKeyDown={blockNonDigitKeys}
                     onPaste={blockNonDigitPaste}
                     error={showErrors("duration")}
+                  />
+                </div>
+                <div className="mt-4">
+                  <TimeSlotPicker
+                    label="Start time"
+                    value={time}
+                    onChange={setTime}
+                    bookedRanges={bookedRanges}
+                    loading={availabilityLoading}
+                    durationHours={Number(duration) || 0}
+                    error={showErrors("time")}
                   />
                 </div>
               </FormSection>
