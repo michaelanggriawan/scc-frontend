@@ -59,6 +59,13 @@ export interface RoomAvailability {
   bookedRanges: BookedRange[];
 }
 
+export interface AvailabilitySummary {
+  roomId: string;
+  from: string;
+  to: string;
+  dates: Record<string, "full" | "partial">;
+}
+
 export interface PaymentProof {
   id: string;
   fileUrl: string;

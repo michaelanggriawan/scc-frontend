@@ -3,13 +3,15 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DayPicker } from "react-day-picker";
+import type { DayButtonProps } from "react-day-picker";
 import { Icon } from "@/components/ui";
+import { api } from "@/lib/api";
 import {
   minutesToTime,
   overlapsBookedRange,
   parseTimeToMinutes,
 } from "@/lib/datetime";
-import type { BookedRange } from "@/lib/types";
+import type { AvailabilitySummary, BookedRange } from "@/lib/types";
 
 const dayPickerClassNames = {
   root: "p-3",
@@ -28,7 +30,7 @@ const dayPickerClassNames = {
   week: "flex",
   day: "w-9 h-9 flex items-center justify-center p-0",
   day_button:
-    "w-8 h-8 flex items-center justify-center text-sm text-ink/80 cursor-pointer transition-colors duration-150 hover:bg-gold/15 disabled:cursor-not-allowed disabled:text-ink/25 disabled:hover:bg-transparent",
+    "relative w-8 h-8 flex items-center justify-center text-sm text-ink/80 cursor-pointer transition-colors duration-150 hover:bg-gold/15 disabled:cursor-not-allowed disabled:text-ink/25 disabled:hover:bg-transparent",
   today: "font-semibold text-mahogany",
   selected: "[&>button]:bg-gold [&>button]:text-mahogany-2 [&>button]:font-semibold [&>button]:hover:bg-gold",
   outside: "text-ink/25",
@@ -47,17 +49,45 @@ function DayPickerChevron({
   );
 }
 
+// Adds a small dot under days flagged with the "partial" modifier (booked,
+// but at least one bookable hour remains) — fully-booked days are simply
+// disabled instead, so they never reach this branch.
+function DayButtonWithDot({ day, modifiers, children, ...rest }: DayButtonProps) {
+  const ref = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (modifiers.focused) ref.current?.focus();
+  }, [modifiers.focused]);
+  return (
+    <button ref={ref} {...rest}>
+      {children}
+      {modifiers.partial && (
+        <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-gold-dim" />
+      )}
+    </button>
+  );
+}
+
+function monthBounds(month: Date): { from: string; to: string } {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const first = new Date(month.getFullYear(), month.getMonth(), 1);
+  const last = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+  const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return { from: fmt(first), to: fmt(last) };
+}
+
 export function DatePicker({
   label,
   value,
   onChange,
   min,
+  roomId,
   error,
 }: {
   label: string;
   value: string; // "YYYY-MM-DD"
   onChange: (date: string) => void;
   min: string; // "YYYY-MM-DD"
+  roomId: string;
   error?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -68,6 +98,7 @@ export function DatePicker({
   const selected = value ? new Date(`${value}T00:00:00`) : undefined;
   const minDate = new Date(`${min}T00:00:00`);
   const [month, setMonth] = useState<Date>(selected ?? minDate);
+  const [summary, setSummary] = useState<AvailabilitySummary | null>(null);
 
   // Popover is portaled to <body> and positioned in viewport coordinates so
   // it can never get trapped behind a later sibling's stacking context (see
@@ -90,6 +121,25 @@ export function DatePicker({
     // fight the user's own prev/next-month navigation while it's open.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !roomId) return;
+    let cancelled = false;
+    const { from, to } = monthBounds(month);
+    api
+      .get<AvailabilitySummary>(
+        `/public/inquiries/availability-summary?roomId=${encodeURIComponent(roomId)}&from=${from}&to=${to}`,
+      )
+      .then((res) => {
+        if (!cancelled) setSummary(res);
+      })
+      .catch(() => {
+        if (!cancelled) setSummary(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, roomId, month]);
 
   useEffect(() => {
     if (!open) return;
@@ -118,6 +168,13 @@ export function DatePicker({
         year: "numeric",
       })
     : "";
+
+  const fullDates = Object.entries(summary?.dates ?? {})
+    .filter(([, status]) => status === "full")
+    .map(([d]) => new Date(`${d}T00:00:00`));
+  const partialDates = Object.entries(summary?.dates ?? {})
+    .filter(([, status]) => status === "partial")
+    .map(([d]) => new Date(`${d}T00:00:00`));
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -153,7 +210,8 @@ export function DatePicker({
               selected={selected}
               month={month}
               onMonthChange={setMonth}
-              disabled={{ before: minDate }}
+              disabled={[{ before: minDate }, ...fullDates]}
+              modifiers={{ partial: partialDates }}
               onSelect={(d) => {
                 if (!d) return;
                 const pad = (n: number) => String(n).padStart(2, "0");
@@ -161,12 +219,23 @@ export function DatePicker({
                 setOpen(false);
               }}
               classNames={dayPickerClassNames}
-              components={{ Chevron: DayPickerChevron }}
+              components={{ Chevron: DayPickerChevron, DayButton: DayButtonWithDot }}
             />
-            <div className="flex justify-center border-t border-[var(--surface-border)] py-2">
+            <div className="flex items-center justify-between gap-3 border-t border-[var(--surface-border)] px-4 py-2">
+              <p className="flex items-center gap-1.5 text-[10px] text-ink/40">
+                <span className="w-1 h-1 rounded-full bg-gold-dim flex-shrink-0" />
+                Partially booked
+              </p>
               <button
                 type="button"
-                onClick={() => setMonth(new Date())}
+                onClick={() => {
+                  const today = new Date();
+                  setMonth(today);
+                  if (today >= minDate) {
+                    const pad = (n: number) => String(n).padStart(2, "0");
+                    onChange(`${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`);
+                  }
+                }}
                 className="text-xs font-semibold text-gold-dim hover:text-mahogany transition-colors duration-150 cursor-pointer"
               >
                 Today
@@ -179,24 +248,10 @@ export function DatePicker({
   );
 }
 
-const SLOT_STEP_MIN = 30;
+const SLOT_STEP_MIN = 60;
 const DAY_START_MIN = 7 * 60; // 07:00
 const DAY_END_MIN = 24 * 60; // midnight
-const PX_PER_HOUR = 40;
-
-function minutesToY(min: number): number {
-  return ((min - DAY_START_MIN) / 60) * PX_PER_HOUR;
-}
-
-function clampMinutes(min: number): number {
-  return Math.min(Math.max(min, DAY_START_MIN), DAY_END_MIN);
-}
-
-const HOUR_LABELS = (() => {
-  const labels: number[] = [];
-  for (let m = DAY_START_MIN; m < DAY_END_MIN; m += 60) labels.push(m);
-  return labels;
-})();
+const ROW_HEIGHT = 44;
 
 function buildSlotStarts(): number[] {
   const slots: number[] = [];
@@ -205,16 +260,12 @@ function buildSlotStarts(): number[] {
 }
 const SLOT_STARTS = buildSlotStarts();
 
-const TIMELINE_HEIGHT = minutesToY(DAY_END_MIN);
-const GUTTER_WIDTH = 58;
-
-// Vertical day timeline (like Google Calendar's week view): booked ranges
-// render as solid blocks, the current start-time + duration selection
-// renders as its own translucent block on top, so an overlap is visible at
-// a glance instead of only surfacing as a validation error after the fact.
-// A plain click sets just the start time (duration untouched); pressing,
-// dragging down, and releasing sets both the start time and the duration
-// spanned by the drag, snapped to whole hours.
+// Vertical list of hourly start-time rows: booked hours render disabled and
+// struck through, the current start-time + duration selection highlights
+// its rows directly, so an overlap is visible at a glance instead of only
+// surfacing as a validation error after the fact. A plain click sets just
+// the start time (duration untouched); pressing, dragging down, and
+// releasing sets both the start time and the duration spanned by the drag.
 export function TimeSlotPicker({
   label,
   value,
@@ -238,16 +289,17 @@ export function TimeSlotPicker({
   const selStart = value ? parseTimeToMinutes(value) : null;
   const selEnd = selStart != null && durationHours > 0 ? selStart + durationHours * 60 : null;
 
-  const timelineRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const dragStartRef = useRef<number | null>(null);
   const dragRangeRef = useRef<{ start: number; end: number } | null>(null);
   const didDragRef = useRef(false);
   const [dragPreview, setDragPreview] = useState<{ start: number; end: number } | null>(null);
 
-  function yToMinutes(clientY: number): number {
-    const rect = timelineRef.current!.getBoundingClientRect();
-    const raw = DAY_START_MIN + ((clientY - rect.top) / PX_PER_HOUR) * 60;
-    return clampMinutes(Math.round(raw / SLOT_STEP_MIN) * SLOT_STEP_MIN);
+  function yToSlot(clientY: number): number {
+    const rect = listRef.current!.getBoundingClientRect();
+    const idx = Math.floor((clientY - rect.top) / ROW_HEIGHT);
+    const clamped = Math.min(Math.max(idx, 0), SLOT_STARTS.length - 1);
+    return SLOT_STARTS[clamped];
   }
 
   function handleSlotMouseDown(startMin: number, booked: boolean) {
@@ -258,14 +310,11 @@ export function TimeSlotPicker({
     setDragPreview(dragRangeRef.current);
 
     function onMove(ev: MouseEvent) {
-      // `cur` is a point on the grid (like the cursor's exact row), not a
-      // slot to include — releasing at the 11:00 line should end the
-      // selection at 11:00, not 11:30, so no extra slot-width is added here.
-      const cur = yToMinutes(ev.clientY);
+      const cur = yToSlot(ev.clientY);
       if (cur !== dragStartRef.current) didDragRef.current = true;
       const s = Math.min(dragStartRef.current!, cur);
       const e = Math.max(dragStartRef.current!, cur);
-      dragRangeRef.current = { start: s, end: e };
+      dragRangeRef.current = { start: s, end: e === s ? e + SLOT_STEP_MIN : e };
       setDragPreview(dragRangeRef.current);
     }
     function onUp() {
@@ -291,112 +340,49 @@ export function TimeSlotPicker({
         {label}
       </span>
       <p className="text-[11px] text-ink/40">
-        Click a slot, or press and drag down to set the start time and duration together.
+        Click an hour, or press and drag down to set the start time and duration together.
       </p>
       <div
-        className={`relative border bg-[var(--field-bg)] max-h-[420px] overflow-y-auto select-none ${
+        ref={listRef}
+        className={`relative flex flex-col border bg-[var(--field-bg)] max-h-[420px] overflow-y-auto select-none ${
           error ? "border-danger" : "border-[var(--field-border)]"
         } ${loading ? "opacity-50 pointer-events-none" : ""}`}
       >
-        <div className="relative flex" style={{ height: TIMELINE_HEIGHT }}>
-          {/* Hour gutter */}
-          <div className="flex-shrink-0 relative" style={{ width: GUTTER_WIDTH }}>
-            {HOUR_LABELS.map((m) => (
-              <span
-                key={m}
-                className="absolute right-2 -translate-y-1/2 text-[13px] font-medium text-ink/50 tabular-nums"
-                style={{ top: minutesToY(m) }}
-              >
-                {minutesToTime(m)}
-              </span>
-            ))}
-          </div>
-
-          {/* Timeline */}
-          <div ref={timelineRef} className="relative flex-1 border-l border-[var(--surface-border)]">
-            {HOUR_LABELS.map((m) => (
-              <div
-                key={m}
-                className="absolute inset-x-0 border-t border-[var(--surface-border)]"
-                style={{ top: minutesToY(m) }}
-              />
-            ))}
-
-            {bookedRanges.map((r, i) => {
-              const s = parseTimeToMinutes(r.start);
-              const e = parseTimeToMinutes(r.end);
-              if (s == null || e == null) return null;
-              const top = minutesToY(Math.max(s, DAY_START_MIN));
-              const height = Math.max(minutesToY(Math.min(e, DAY_END_MIN)) - top, 4);
-              return (
-                <div
-                  key={i}
-                  className="absolute inset-x-0.5 rounded-sm bg-danger/20 border border-danger/40 px-1.5 py-0.5 overflow-hidden pointer-events-none"
-                  style={{ top, height }}
-                >
-                  <span className="text-xs font-medium text-danger/90 leading-tight">
-                    Booked {r.start}–{r.end}
-                  </span>
-                </div>
-              );
-            })}
-
-            {SLOT_STARTS.map((m) => {
-              const booked = bookedRanges.some((r) => {
-                const s = parseTimeToMinutes(r.start);
-                const e = parseTimeToMinutes(r.end);
-                return s != null && e != null && m >= s && m < e;
-              });
-              return (
-                <button
-                  key={m}
-                  type="button"
-                  disabled={booked}
-                  title={booked ? "Already booked" : minutesToTime(m)}
-                  onMouseDown={() => handleSlotMouseDown(m, booked)}
-                  onClick={() => {
-                    if (didDragRef.current) return;
-                    onChange(minutesToTime(m));
-                  }}
-                  className={`absolute inset-x-0 cursor-pointer transition-colors duration-100 ${
-                    booked ? "cursor-not-allowed" : "hover:bg-gold/10"
-                  }`}
-                  style={{ top: minutesToY(m), height: PX_PER_HOUR / 2 }}
-                />
-              );
-            })}
-
-            {!dragPreview && selStart != null && selEnd != null && (
-              <div
-                className={`absolute inset-x-0.5 rounded-sm border-2 pointer-events-none ${
-                  overlap ? "bg-gold/40 border-danger" : "bg-gold/40 border-gold"
-                }`}
-                style={{
-                  top: minutesToY(selStart),
-                  height: Math.max(minutesToY(selEnd) - minutesToY(selStart), 4),
-                }}
-              >
-                <span className="text-xs font-semibold text-mahogany-2 px-1.5 py-0.5 block">
-                  {value}–{minutesToTime(selEnd)}
-                </span>
-              </div>
-            )}
-
-            {dragPreview && (
-              <div
-                className="absolute inset-x-0.5 rounded-sm border-2 border-dashed border-gold bg-gold/30 pointer-events-none"
-                style={{
-                  top: minutesToY(dragPreview.start),
-                  height: Math.max(minutesToY(dragPreview.end) - minutesToY(dragPreview.start), 4),
-                }}
-              >
-                <span className="text-xs font-semibold text-mahogany-2 px-1.5 py-0.5 block">
-                  {minutesToTime(dragPreview.start)}–{minutesToTime(dragPreview.end)}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
+        {SLOT_STARTS.map((m) => {
+          const booked = bookedRanges.some((r) => {
+            const s = parseTimeToMinutes(r.start);
+            const e = parseTimeToMinutes(r.end);
+            return s != null && e != null && m >= s && m < e;
+          });
+          const inSelection =
+            !dragPreview && selStart != null && selEnd != null && m >= selStart && m < selEnd;
+          const inDrag = dragPreview != null && m >= dragPreview.start && m < dragPreview.end;
+          return (
+            <button
+              key={m}
+              type="button"
+              disabled={booked}
+              onMouseDown={() => handleSlotMouseDown(m, booked)}
+              onClick={() => {
+                if (didDragRef.current) return;
+                onChange(minutesToTime(m));
+              }}
+              style={{ height: ROW_HEIGHT }}
+              className={`flex-shrink-0 flex items-center justify-between px-3.5 border-b border-[var(--surface-border)] last:border-b-0 text-sm cursor-pointer transition-colors duration-100 ${
+                booked
+                  ? "text-ink/30 line-through cursor-not-allowed bg-transparent"
+                  : inDrag
+                    ? "bg-gold/30 border-2 border-dashed border-gold text-mahogany-2 font-semibold"
+                    : inSelection
+                      ? `font-semibold text-mahogany-2 ${overlap ? "bg-gold/40 border border-danger" : "bg-gold/40"}`
+                      : "text-ink/75 hover:bg-gold/10"
+              }`}
+            >
+              <span className="tabular-nums">{minutesToTime(m)}</span>
+              {booked && <span className="text-[11px] font-medium text-ink/35">Booked</span>}
+            </button>
+          );
+        })}
       </div>
       {overlap && (
         <p className="text-xs text-danger">

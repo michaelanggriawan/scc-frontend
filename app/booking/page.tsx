@@ -396,6 +396,7 @@ export default function BookingPage() {
                     min={MIN_DATE}
                     value={date}
                     onChange={setDate}
+                    roomId={roomId}
                     error={showErrors("date")}
                   />
                   <TextField
