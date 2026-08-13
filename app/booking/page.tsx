@@ -20,7 +20,7 @@ import {
 import { DatePicker, TimeSlotPicker } from "@/components/schedule-picker";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { overlapsBookedRange } from "@/lib/datetime";
+import { overlapsBookedRange, snapToHalfHour } from "@/lib/datetime";
 import {
   blockNonDigitKeys,
   blockNonDigitPaste,
@@ -117,7 +117,9 @@ export default function BookingPage() {
     setRoomId(draft.roomId ?? "");
     setAddonIds(draft.addonIds ?? []);
     setDate(draft.date ?? "");
-    setTime(draft.time ?? "");
+    // Older drafts may hold an off-grid time from before the slot picker
+    // (e.g. free-typed into the native input); snap it to a real slot.
+    setTime(draft.time ? snapToHalfHour(draft.time) : "");
     setDuration(draft.duration ?? "");
     setNotes(draft.notes ?? "");
     setName(draft.name ?? "");

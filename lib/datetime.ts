@@ -36,6 +36,16 @@ export function minutesToTime(totalMinutes: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
+// Rounds "HH:MM" to the nearest 30-minute slot (e.g. a restored draft's
+// "12:12" -> "12:00") so it always lines up with a real clickable slot.
+// Returns the input unchanged if it doesn't parse as a time.
+export function snapToHalfHour(time: string): string {
+  const min = parseTimeToMinutes(time);
+  if (min == null) return time;
+  const snapped = Math.round(min / 30) * 30;
+  return minutesToTime(((snapped % 1440) + 1440) % 1440);
+}
+
 // True if [start, start+durationHours) overlaps any of the given booked ranges.
 export function overlapsBookedRange(
   time: string,
