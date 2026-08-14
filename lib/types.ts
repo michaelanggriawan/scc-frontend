@@ -48,6 +48,24 @@ export interface AddOn {
   order: number;
 }
 
+export interface BookedRange {
+  start: string; // "HH:MM"
+  end: string; // "HH:MM"
+}
+
+export interface RoomAvailability {
+  roomId: string;
+  date: string;
+  bookedRanges: BookedRange[];
+}
+
+export interface AvailabilitySummary {
+  roomId: string;
+  from: string;
+  to: string;
+  dates: Record<string, "full" | "partial">;
+}
+
 export interface PaymentProof {
   id: string;
   fileUrl: string;
