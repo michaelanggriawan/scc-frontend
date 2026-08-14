@@ -17,7 +17,8 @@ import {
   TextArea,
   TextField,
 } from "@/components/ui";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, fileUrl } from "@/lib/api";
+import { isValidUploadSize, MAX_UPLOAD_MB } from "@/lib/validation";
 import type { EntityStatus, Room, RoomSpec } from "@/lib/types";
 
 const SPEC_SYSTEMS = [
@@ -39,6 +40,7 @@ type Draft = {
   description: string;
   facilities: string[];
   specs: RoomSpec[];
+  photos: string[];
 };
 
 function blank(): Draft {
@@ -50,6 +52,7 @@ function blank(): Draft {
     description: "",
     facilities: [],
     specs: SPEC_SYSTEMS.map((system) => ({ system, spec: "" })),
+    photos: [],
   };
 }
 
@@ -209,10 +212,39 @@ function RoomForm({
       initial.specs?.length
         ? initial.specs
         : SPEC_SYSTEMS.map((system) => ({ system, spec: "" })),
+    photos: initial.photos ?? [],
   });
   const [facilityDraft, setFacilityDraft] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoErr, setPhotoErr] = useState("");
+
+  async function uploadPhotos(files: FileList) {
+    setPhotoErr("");
+    for (const file of Array.from(files)) {
+      if (!isValidUploadSize(file)) {
+        setPhotoErr(`Each photo must be ${MAX_UPLOAD_MB} MB or smaller.`);
+        continue;
+      }
+      setUploadingPhoto(true);
+      try {
+        const res = await api.upload<{ fileUrl: string }>(
+          "/admin/uploads/room-photo",
+          file,
+        );
+        setD((prev) => ({ ...prev, photos: [...prev.photos, res.fileUrl] }));
+      } catch (e) {
+        setPhotoErr(e instanceof ApiError ? e.message : "Upload failed.");
+      } finally {
+        setUploadingPhoto(false);
+      }
+    }
+  }
+
+  function removePhoto(url: string) {
+    setD((prev) => ({ ...prev, photos: prev.photos.filter((p) => p !== url) }));
+  }
 
   async function save() {
     setErr("");
@@ -327,6 +359,52 @@ function RoomForm({
             Add
           </OutlineBtn>
         </div>
+      </div>
+
+      {/* Photos */}
+      <div className="flex flex-col gap-2">
+        <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.12em]">
+          Photos
+        </span>
+        {d.photos.length > 0 && (
+          <div className="flex flex-wrap gap-3">
+            {d.photos.map((url) => (
+              <div
+                key={url}
+                className="relative w-24 h-24 flex-shrink-0 border border-[var(--surface-border)] bg-white"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={fileUrl(url)}
+                  alt="Room photo"
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  onClick={() => removePhoto(url)}
+                  className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-danger text-white flex items-center justify-center cursor-pointer"
+                  aria-label="Remove photo"
+                >
+                  <Icon name="close" className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <label className="flex items-center gap-2 border border-dashed border-[var(--field-border)] px-4 py-3 text-xs text-[var(--text-muted)] cursor-pointer hover:border-gold transition-colors w-fit">
+          <Icon name="upload" className="w-4 h-4 text-gold flex-shrink-0" />
+          {uploadingPhoto ? "Uploading…" : `Upload photos · Max ${MAX_UPLOAD_MB} MB each`}
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files?.length) uploadPhotos(e.target.files);
+              e.target.value = "";
+            }}
+          />
+        </label>
+        {photoErr && <Alert>{photoErr}</Alert>}
       </div>
 
       {/* Specs */}

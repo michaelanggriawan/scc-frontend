@@ -17,7 +17,8 @@ import {
   TextArea,
   TextField,
 } from "@/components/ui";
-import { api, ApiError } from "@/lib/api";
+import { RoomGalleryLightbox } from "@/components/room-gallery-lightbox";
+import { api, ApiError, fileUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
   blockNonDigitKeys,
@@ -87,6 +88,7 @@ export default function BookingPage() {
 
   const [category, setCategory] = useState("");
   const [roomId, setRoomId] = useState("");
+  const [galleryRoom, setGalleryRoom] = useState<Room | null>(null);
   const [addonIds, setAddonIds] = useState<string[]>([]);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
@@ -313,20 +315,42 @@ export default function BookingPage() {
               <FormSection icon="building" title="Select a room">
                 <div className="flex flex-col gap-3">
                   {rooms.map((room) => (
-                    <button
+                    <div
                       key={room.id}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => setRoomId(room.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setRoomId(room.id);
+                        }
+                      }}
                       className={`flex items-center gap-4 border bg-[var(--surface)] p-4 text-left cursor-pointer transition-colors duration-150 ${
                         roomId === room.id
                           ? "border-gold"
                           : "border-[var(--surface-border)] hover:border-gold-dim"
                       }`}
                     >
-                      <PhotoBox
-                        label="Room"
-                        icon="building"
-                        className="w-24 h-16 flex-shrink-0"
-                      />
+                      {room.photos?.[0] ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setGalleryRoom(room);
+                          }}
+                          className="relative w-24 h-16 flex-shrink-0 cursor-pointer overflow-hidden"
+                          aria-label={`View photos of ${room.name}`}
+                        >
+                          <RoomThumb url={fileUrl(room.photos[0])} alt={room.name} />
+                        </button>
+                      ) : (
+                        <PhotoBox
+                          label="Room"
+                          icon="building"
+                          className="w-24 h-16 flex-shrink-0"
+                        />
+                      )}
                       <div className="flex-1">
                         <p className="text-sm font-semibold text-ink">
                           {room.name}
@@ -346,7 +370,7 @@ export default function BookingPage() {
                           <Icon name="check" className="w-3 h-3 text-mahogany-2" strokeWidth={2.5} />
                         )}
                       </span>
-                    </button>
+                    </div>
                   ))}
                 </div>
                 {showErrors("room") && (
@@ -538,8 +562,30 @@ export default function BookingPage() {
         </div>
       </Modal>
 
+      {galleryRoom && (
+        <RoomGalleryLightbox
+          photos={galleryRoom.photos}
+          roomName={galleryRoom.name}
+          onClose={() => setGalleryRoom(null)}
+        />
+      )}
+
       <Footer />
     </div>
+  );
+}
+
+function RoomThumb({ url, alt }: { url: string; alt: string }) {
+  const [broken, setBroken] = useState(false);
+  if (broken) return <PhotoBox label="Room" icon="building" className="w-full h-full" />;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt={alt}
+      className="w-full h-full object-cover"
+      onError={() => setBroken(true)}
+    />
   );
 }
 
