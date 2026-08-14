@@ -275,14 +275,19 @@ export function Footer() {
               Follow Us
             </p>
             <div className="flex items-center gap-3">
-              {socials.map(([name]) => (
-                <span
-                  key={name}
-                  className="w-9 h-9 flex items-center justify-center border border-[var(--surface-border-strong)] text-gold-dim hover:text-gold hover:border-gold transition-colors"
-                >
-                  <Icon name={name} className="w-4 h-4" />
-                </span>
-              ))}
+              {socials.map(([name, url]) =>
+                url ? (
+                  <a
+                    key={name}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-9 h-9 flex items-center justify-center border border-[var(--surface-border-strong)] text-gold-dim hover:text-gold hover:border-gold transition-colors"
+                  >
+                    <Icon name={name} className="w-4 h-4" />
+                  </a>
+                ) : null,
+              )}
             </div>
           </div>
         </div>
