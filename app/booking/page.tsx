@@ -251,7 +251,7 @@ export default function BookingPage() {
               availability.
             </p>
             <div className="flex gap-3 justify-center mt-2">
-              <Link href="/profile">
+              <Link href="/profile?tab=bookings">
                 <Btn>Track in my bookings</Btn>
               </Link>
               <Link href="/">

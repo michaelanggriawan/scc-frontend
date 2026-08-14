@@ -92,7 +92,7 @@ export default function PayPage() {
           Our team will verify and confirm shortly.
         </p>
         <Link
-          href="/profile"
+          href="/profile?tab=bookings"
           className="inline-flex items-center gap-1.5 text-xs text-mahogany hover:text-cherry transition-colors duration-150"
         >
           <Icon name="arrowLeft" className="w-3.5 h-3.5" />
