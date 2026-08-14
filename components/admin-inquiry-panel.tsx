@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Btn, Icon, OutlineBtn, Select, TextArea } from "./ui";
 import { api, ApiError, fileUrl, rupiah } from "@/lib/api";
 import {
@@ -46,6 +46,7 @@ export function AdminInquiryPanel({
   const [inq, setInq] = useState<Inquiry | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [copied, setCopied] = useState(false);
 
   // editable fields
   const [roomId, setRoomId] = useState("");
@@ -58,7 +59,12 @@ export function AdminInquiryPanel({
   const [rejectReason, setRejectReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
-  const [link, setLink] = useState("");
+
+  // Scrolls the payment-link alert into view right after it's generated —
+  // otherwise it can render below the fold relative to wherever the admin
+  // had scrolled to click the button, and looks like nothing happened.
+  const linkRef = useRef<HTMLDivElement>(null);
+  const [pendingLinkScroll, setPendingLinkScroll] = useState(false);
 
   const load = useCallback(async () => {
     const d = await api.get<Inquiry>(`/admin/inquiries/${refId}`);
@@ -75,6 +81,13 @@ export function AdminInquiryPanel({
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (pendingLinkScroll && linkRef.current) {
+      linkRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      setPendingLinkScroll(false);
+    }
+  }, [pendingLinkScroll]);
 
   async function run(fn: () => Promise<unknown>) {
     setErr("");
@@ -318,19 +331,15 @@ export function AdminInquiryPanel({
                         full
                         disabled={busy || !price.trim() || !dueDate}
                         onClick={() =>
-                          run(async () => {
-                            const res = await api.post<{ paymentLink: string }>(
-                              `/admin/inquiries/${inq.ref}/awaiting-payment`,
-                              {
-                                agreedPrice: Number(price),
-                                paymentDueDate: fromDatetimeLocal(dueDate),
-                                roomId: roomId || null,
-                                addonIds,
-                                adminNotes,
-                              },
-                            );
-                            setLink(res.paymentLink);
-                          })
+                          run(() =>
+                            api.post(`/admin/inquiries/${inq.ref}/awaiting-payment`, {
+                              agreedPrice: Number(price),
+                              paymentDueDate: fromDatetimeLocal(dueDate),
+                              roomId: roomId || null,
+                              addonIds,
+                              adminNotes,
+                            }),
+                          ).then(() => setPendingLinkScroll(true))
                         }
                       >
                         Mark as Awaiting Payment
@@ -347,13 +356,36 @@ export function AdminInquiryPanel({
                       Changes to correct the price or due date.
                     </p>
                   )}
-                  {link && (
-                    <Alert kind="success">
-                      Payment link:{" "}
-                      <a href={link} target="_blank" rel="noreferrer" className="underline break-all">
-                        {link}
-                      </a>
-                    </Alert>
+                  {inq.paymentLink && (
+                    <div ref={linkRef}>
+                      <Alert kind={inq.paymentLink.expired ? "error" : "success"}>
+                        {inq.paymentLink.expired ? (
+                          "This payment link has expired."
+                        ) : (
+                          <>
+                            Payment link:{" "}
+                            <a
+                              href={inq.paymentLink.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="underline break-all"
+                            >
+                              {inq.paymentLink.url}
+                            </a>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(inq.paymentLink!.url);
+                                setCopied(true);
+                                setTimeout(() => setCopied(false), 1500);
+                              }}
+                              className="ml-3 underline cursor-pointer"
+                            >
+                              {copied ? "Copied!" : "Copy"}
+                            </button>
+                          </>
+                        )}
+                      </Alert>
+                    </div>
                   )}
                 </div>
               </>

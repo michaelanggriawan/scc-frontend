@@ -101,6 +101,7 @@ export interface Inquiry {
   room?: Room | null;
   addons?: AddOn[];
   proofs?: PaymentProof[];
+  paymentLink?: { url: string; expiresAt: string | null; expired: boolean } | null;
 }
 
 export interface VenueInfo {
