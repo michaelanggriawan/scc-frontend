@@ -11,6 +11,7 @@ const NAV = [
   ["Inquiries", "/admin/inquiries", "fileText"],
   ["Rooms", "/admin/rooms", "building"],
   ["Add-ons", "/admin/addons", "plus"],
+  ["Users", "/admin/users", "users"],
   ["Settings", "/admin/settings", "spark"],
 ] as const;
 

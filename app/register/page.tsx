@@ -10,15 +10,6 @@ import { useAuth } from "@/lib/auth";
 import { ApiError } from "@/lib/api";
 import { isValidEmail, isValidPhone, validatePassword } from "@/lib/validation";
 
-export default function RegisterPage() {
-  return (
-    <Suspense>
-      <RegisterForm />
-    </Suspense>
-  );
-}
-
-function RegisterForm() {
 function RegisterContent() {
   const { register } = useAuth();
   const router = useRouter();
@@ -56,7 +47,7 @@ function RegisterContent() {
     setBusy(true);
     try {
       await register(form);
-      router.push(next || "/profile");
+      router.push(next || "/");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Registration failed.");
     } finally {

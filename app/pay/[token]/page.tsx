@@ -14,26 +14,27 @@ export default function PayPage() {
   const params = useParams<{ token: string }>();
   const token = params.token;
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, logout } = useAuth();
   const [data, setData] = useState<PayPageData | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [wrongAccount, setWrongAccount] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [done, setDone] = useState(false);
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace(`/login?next=${encodeURIComponent(`/pay/${token}`)}`);
-    }
-  }, [authLoading, user, router, token]);
+  const loginHref = `/login?next=${encodeURIComponent(`/pay/${token}`)}`;
 
   const load = useCallback(async () => {
     if (!user) return;
     try {
       setData(await api.get<PayPageData>(`/pay/${token}`));
-    } catch {
-      setNotFound(true);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 403) {
+        setWrongAccount(true);
+      } else {
+        setNotFound(true);
+      }
     }
   }, [token, user]);
 
@@ -41,7 +42,40 @@ export default function PayPage() {
     load();
   }, [load]);
 
-  if (authLoading || !user) return <Spinner label="Loading payment page…" />;
+  if (authLoading) return <Spinner label="Loading payment page…" />;
+
+  if (!user)
+    return (
+      <Centered>
+        <Icon name="shield" className="w-8 h-8 text-gold-dim mx-auto" />
+        <h1 className="font-display text-2xl text-ink">Please log in</h1>
+        <p className="text-sm text-ink/55">
+          This payment link is tied to a specific account. Log in with the
+          account this booking belongs to, to continue.
+        </p>
+        <Btn onClick={() => router.push(loginHref)}>Log In</Btn>
+      </Centered>
+    );
+
+  if (wrongAccount)
+    return (
+      <Centered>
+        <Icon name="alert" className="w-8 h-8 text-danger mx-auto" />
+        <h1 className="font-display text-2xl text-ink">Wrong account</h1>
+        <p className="text-sm text-ink/55">
+          This payment link belongs to a different account. Log out and log
+          back in with the account this booking was made under.
+        </p>
+        <Btn
+          onClick={() => {
+            logout();
+            router.push(loginHref);
+          }}
+        >
+          Log Out &amp; Switch Account
+        </Btn>
+      </Centered>
+    );
 
   async function submit() {
     if (!file) return;
@@ -92,7 +126,7 @@ export default function PayPage() {
           Our team will verify and confirm shortly.
         </p>
         <Link
-          href="/profile"
+          href="/profile?tab=bookings"
           className="inline-flex items-center gap-1.5 text-xs text-mahogany hover:text-cherry transition-colors duration-150"
         >
           <Icon name="arrowLeft" className="w-3.5 h-3.5" />

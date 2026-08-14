@@ -129,6 +129,20 @@ function VenueSection({ initial }: { initial: VenueInfo }) {
         value={v.email}
         onChange={(e) => setV({ ...v, email: e.target.value })}
       />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <TextField
+          label="Instagram"
+          placeholder="e.g. https://instagram.com/venue"
+          value={v.instagram || ""}
+          onChange={(e) => setV({ ...v, instagram: e.target.value })}
+        />
+        <TextField
+          label="YouTube"
+          placeholder="e.g. https://youtube.com/@venue"
+          value={v.youtube || ""}
+          onChange={(e) => setV({ ...v, youtube: e.target.value })}
+        />
+      </div>
       {msg && <Alert kind="success">{msg}</Alert>}
       {err && <Alert>{err}</Alert>}
       <div>

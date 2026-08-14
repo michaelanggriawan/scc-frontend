@@ -132,7 +132,7 @@ export default function AdminInquiriesPage() {
         </div>
 
         <div className="bg-white border border-[var(--surface-border)]">
-          {loading ? (
+          {loading && items.length === 0 ? (
             <Spinner />
           ) : (
             <InquiryTable

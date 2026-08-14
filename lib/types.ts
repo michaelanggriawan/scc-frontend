@@ -19,6 +19,7 @@ export interface User {
   company: string;
   role: UserRole;
   passwordChangedAt: string | null;
+  createdAt: string;
 }
 
 export interface RoomSpec {
@@ -46,6 +47,24 @@ export interface AddOn {
   description: string;
   status: EntityStatus;
   order: number;
+}
+
+export interface BookedRange {
+  start: string; // "HH:MM"
+  end: string; // "HH:MM"
+}
+
+export interface RoomAvailability {
+  roomId: string;
+  date: string;
+  bookedRanges: BookedRange[];
+}
+
+export interface AvailabilitySummary {
+  roomId: string;
+  from: string;
+  to: string;
+  dates: Record<string, "full" | "partial">;
 }
 
 export interface PaymentProof {
@@ -82,6 +101,7 @@ export interface Inquiry {
   room?: Room | null;
   addons?: AddOn[];
   proofs?: PaymentProof[];
+  paymentLink?: { url: string; expiresAt: string | null; expired: boolean } | null;
 }
 
 export interface VenueInfo {
