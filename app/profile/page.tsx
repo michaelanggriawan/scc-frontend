@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { NavBar, Footer, FloatingWA } from "@/components/site";
 import {
   Alert,
@@ -34,13 +34,26 @@ const CANCELLABLE = [
 ];
 
 export default function ProfilePage() {
+  return (
+    <Suspense fallback={<Spinner label="Loading your profile…" />}>
+      <ProfileContent />
+    </Suspense>
+  );
+}
+
+function ProfileContent() {
   const { user, loading, refresh } = useAuth();
   const router = useRouter();
-  const [tab, setTab] = useState<"account" | "bookings">("account");
+  const searchParams = useSearchParams();
+  const tab: "account" | "bookings" =
+    searchParams.get("tab") === "bookings" ? "bookings" : "account";
 
   useEffect(() => {
-    if (!loading && !user) router.replace("/login");
-  }, [loading, user, router]);
+    if (!loading && !user) {
+      const next = tab === "bookings" ? "/profile?tab=bookings" : "/profile";
+      router.replace(`/login?next=${encodeURIComponent(next)}`);
+    }
+  }, [loading, user, router, tab]);
 
   if (loading || !user) return <Spinner label="Loading your profile…" />;
 
@@ -61,7 +74,7 @@ export default function ProfilePage() {
           {(["account", "bookings"] as const).map((t) => (
             <button
               key={t}
-              onClick={() => setTab(t)}
+              onClick={() => router.replace(`/profile?tab=${t}`)}
               className={`px-6 py-3 text-sm font-semibold border-b-2 cursor-pointer transition-colors duration-150 ${
                 tab === t
                   ? "border-gold text-ink"

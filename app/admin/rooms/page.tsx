@@ -21,17 +21,6 @@ import { api, ApiError, fileUrl } from "@/lib/api";
 import { isValidUploadSize, MAX_UPLOAD_MB } from "@/lib/validation";
 import type { EntityStatus, Room, RoomSpec } from "@/lib/types";
 
-const SPEC_SYSTEMS = [
-  "LED Display",
-  "Sound System",
-  "Rigging",
-  "Lighting",
-  "Power Supply",
-  "Connectivity",
-  "IMAG / Projection",
-  "Communication",
-];
-
 type Draft = {
   name: string;
   capacity: string;
@@ -53,6 +42,7 @@ function blank(): Draft {
     facilities: [],
     specs: SPEC_SYSTEMS.map((system) => ({ system, spec: "" })),
     photos: [],
+    specs: [],
   };
 }
 
@@ -213,6 +203,7 @@ function RoomForm({
         ? initial.specs
         : SPEC_SYSTEMS.map((system) => ({ system, spec: "" })),
     photos: initial.photos ?? [],
+    specs: initial.specs ?? [],
   });
   const [facilityDraft, setFacilityDraft] = useState("");
   const [err, setErr] = useState("");
@@ -244,6 +235,32 @@ function RoomForm({
 
   function removePhoto(url: string) {
     setD((prev) => ({ ...prev, photos: prev.photos.filter((p) => p !== url) }));
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
+
+  function updateSpec(i: number, patch: Partial<RoomSpec>) {
+    setD((prev) => ({
+      ...prev,
+      specs: prev.specs.map((sp, idx) => (idx === i ? { ...sp, ...patch } : sp)),
+    }));
+  }
+
+  function removeSpec(i: number) {
+    setD((prev) => ({ ...prev, specs: prev.specs.filter((_, idx) => idx !== i) }));
+  }
+
+  function addSpec() {
+    setD((prev) => ({ ...prev, specs: [...prev.specs, { system: "", spec: "" }] }));
+  }
+
+  function reorderSpecs(from: number, to: number) {
+    if (from === to) return;
+    setD((prev) => {
+      const specs = [...prev.specs];
+      const [moved] = specs.splice(from, 1);
+      specs.splice(to, 0, moved);
+      return { ...prev, specs };
+    });
   }
 
   async function save() {
@@ -415,28 +432,68 @@ function RoomForm({
         <div className="border border-[var(--surface-border)] bg-white">
           {d.specs.map((s, i) => (
             <div
-              key={s.system}
-              className="flex items-center gap-3 border-b border-[var(--surface-border)] last:border-0 px-4 py-2.5"
+              key={i}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (dragIndex !== null && overIndex !== i) setOverIndex(i);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (dragIndex !== null) reorderSpecs(dragIndex, i);
+                setDragIndex(null);
+                setOverIndex(null);
+              }}
+              className={`flex items-center gap-2 border-b border-[var(--surface-border)] last:border-0 px-3 py-2 ${
+                dragIndex === i ? "opacity-40" : ""
+              } ${overIndex === i && dragIndex !== i ? "border-t-2 border-t-gold" : ""}`}
             >
-              <span className="text-xs font-semibold text-ink w-36 flex-shrink-0">
-                {s.system}
-              </span>
+              <div
+                draggable
+                onDragStart={(e) => {
+                  e.stopPropagation();
+                  e.dataTransfer.effectAllowed = "move";
+                  setDragIndex(i);
+                }}
+                onDragEnd={() => {
+                  setDragIndex(null);
+                  setOverIndex(null);
+                }}
+                className="flex items-center justify-center text-[var(--text-muted)] hover:text-ink cursor-grab active:cursor-grabbing flex-shrink-0"
+                title="Drag to reorder"
+              >
+                <Icon name="gripVertical" className="w-4 h-4" />
+              </div>
+              <input
+                value={s.system}
+                onChange={(e) => updateSpec(i, { system: e.target.value })}
+                placeholder="System…"
+                className="w-36 flex-shrink-0 border border-[var(--field-border)] bg-[var(--field-bg)] text-xs font-semibold text-[var(--text-primary)] placeholder:text-[var(--field-placeholder)] px-3 py-1.5 outline-none focus:border-gold transition-colors duration-150"
+              />
               <input
                 value={s.spec}
-                onChange={(e) =>
-                  setD({
-                    ...d,
-                    specs: d.specs.map((sp, idx) =>
-                      idx === i ? { ...sp, spec: e.target.value } : sp,
-                    ),
-                  })
-                }
+                onChange={(e) => updateSpec(i, { spec: e.target.value })}
                 placeholder="Specification…"
                 className="flex-1 border border-[var(--field-border)] bg-[var(--field-bg)] text-xs text-[var(--text-primary)] placeholder:text-[var(--field-placeholder)] px-3 py-1.5 outline-none focus:border-gold transition-colors duration-150"
               />
+              <button
+                onClick={() => removeSpec(i)}
+                className="text-[var(--text-muted)] hover:text-danger cursor-pointer flex-shrink-0"
+                aria-label="Remove spec row"
+              >
+                <Icon name="close" className="w-3.5 h-3.5" />
+              </button>
             </div>
           ))}
+          {d.specs.length === 0 && (
+            <div className="px-4 py-3 text-xs text-[var(--text-muted)]">
+              No specs yet.
+            </div>
+          )}
         </div>
+        <OutlineBtn sm onClick={addSpec} className="self-start">
+          <Icon name="plus" className="w-3.5 h-3.5" />
+          Add row
+        </OutlineBtn>
       </div>
 
       {err && <Alert>{err}</Alert>}

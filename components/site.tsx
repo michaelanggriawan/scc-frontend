@@ -167,12 +167,12 @@ export function FloatingWA() {
       <div className="bg-mahogany border border-gold-dim/60 px-3 py-1.5 text-xs text-custard shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
         Chat with us on WhatsApp
       </div>
-      <div className="w-14 h-14 cursor-pointer rounded-full bg-[linear-gradient(155deg,var(--color-gold-light),var(--color-gold))] p-2.5 shadow-[0_8px_24px_-6px_rgba(0,0,0,0.5)] transition-transform hover:scale-105">
+      <div className="w-16 h-16 cursor-pointer rounded-full bg-[linear-gradient(155deg,var(--color-gold-light),var(--color-gold))] p-3 shadow-[0_8px_24px_-6px_rgba(0,0,0,0.5)] transition-transform hover:scale-105">
         <Image
           src="/WhatsApp.webp"
           alt="Chat with us on WhatsApp"
-          width={40}
-          height={40}
+          width={48}
+          height={48}
           className="w-full h-full object-contain"
         />
       </div>
@@ -275,14 +275,19 @@ export function Footer() {
               Follow Us
             </p>
             <div className="flex items-center gap-3">
-              {socials.map(([name]) => (
-                <span
-                  key={name}
-                  className="w-9 h-9 flex items-center justify-center border border-[var(--surface-border-strong)] text-gold-dim hover:text-gold hover:border-gold transition-colors"
-                >
-                  <Icon name={name} className="w-4 h-4" />
-                </span>
-              ))}
+              {socials.map(([name, url]) =>
+                url ? (
+                  <a
+                    key={name}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-9 h-9 flex items-center justify-center border border-[var(--surface-border-strong)] text-gold-dim hover:text-gold hover:border-gold transition-colors"
+                  >
+                    <Icon name={name} className="w-4 h-4" />
+                  </a>
+                ) : null,
+              )}
             </div>
           </div>
         </div>
