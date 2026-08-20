@@ -40,15 +40,17 @@ function blank(): Draft {
     status: "Active",
     description: "",
     facilities: [],
-    specs: SPEC_SYSTEMS.map((system) => ({ system, spec: "" })),
-    photos: [],
     specs: [],
+    photos: [],
   };
 }
 
 export default function AdminRoomsPage() {
   const [rooms, setRooms] = useState<Room[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  // Rooms that have been opened at least once stay mounted (just collapsed)
+  // so re-closing them animates shut instead of vanishing.
+  const [openedIds, setOpenedIds] = useState<Set<string>>(new Set());
   const [adding, setAdding] = useState(false);
 
   const load = useCallback(async () => {
@@ -115,7 +117,12 @@ export default function AdminRoomsPage() {
                 {rooms.map((room) => (
                   <Fragment key={room.id}>
                     <tr
-                      onClick={() => setOpenId(openId === room.id ? null : room.id)}
+                      onClick={() => {
+                        const willOpen = openId !== room.id;
+                        setOpenId(willOpen ? room.id : null);
+                        if (willOpen)
+                          setOpenedIds((s) => new Set(s).add(room.id));
+                      }}
                       className={`border-b border-[var(--surface-border)] cursor-pointer hover:bg-cream/60 transition-colors ${
                         openId === room.id ? "bg-cream" : ""
                       }`}
@@ -144,24 +151,32 @@ export default function AdminRoomsPage() {
                         <Icon name="pencil" className="w-4 h-4 text-[var(--text-muted)] inline-block" />
                       </td>
                     </tr>
-                    {openId === room.id && (
-                      <tr>
-                        <td colSpan={5} className="p-0">
-                          <div className="border-t border-[var(--surface-border)] bg-cream p-7">
-                            <RoomForm
-                              initial={room}
-                              onSave={async (d) => {
-                                await api.patch(`/admin/rooms/${room.id}`, d);
-                                setOpenId(null);
-                                load();
-                              }}
-                              onCancel={() => setOpenId(null)}
-                              onDelete={() => remove(room.id)}
-                            />
+                    <tr>
+                      <td colSpan={5} className="p-0">
+                        <div
+                          className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                            openId === room.id ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                          }`}
+                        >
+                          <div className="overflow-hidden">
+                            {openedIds.has(room.id) && (
+                              <div className="border-t border-[var(--surface-border)] bg-cream p-7">
+                                <RoomForm
+                                  initial={room}
+                                  onSave={async (d) => {
+                                    await api.patch(`/admin/rooms/${room.id}`, d);
+                                    setOpenId(null);
+                                    load();
+                                  }}
+                                  onCancel={() => setOpenId(null)}
+                                  onDelete={() => remove(room.id)}
+                                />
+                              </div>
+                            )}
                           </div>
-                        </td>
-                      </tr>
-                    )}
+                        </div>
+                      </td>
+                    </tr>
                   </Fragment>
                 ))}
                 {rooms.length === 0 && (
@@ -198,12 +213,8 @@ function RoomForm({
     status: initial.status,
     description: initial.description,
     facilities: initial.facilities ?? [],
-    specs:
-      initial.specs?.length
-        ? initial.specs
-        : SPEC_SYSTEMS.map((system) => ({ system, spec: "" })),
-    photos: initial.photos ?? [],
     specs: initial.specs ?? [],
+    photos: initial.photos ?? [],
   });
   const [facilityDraft, setFacilityDraft] = useState("");
   const [err, setErr] = useState("");
@@ -235,6 +246,7 @@ function RoomForm({
 
   function removePhoto(url: string) {
     setD((prev) => ({ ...prev, photos: prev.photos.filter((p) => p !== url) }));
+  }
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
 

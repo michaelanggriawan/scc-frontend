@@ -35,13 +35,11 @@ export function AdminInquiryPanel({
   rooms,
   addons,
   onChanged,
-  onClose,
 }: {
   refId: string;
   rooms: Room[];
   addons: AddOn[];
   onChanged: () => void;
-  onClose: () => void;
 }) {
   const [inq, setInq] = useState<Inquiry | null>(null);
   const [busy, setBusy] = useState(false);
@@ -125,16 +123,7 @@ export function AdminInquiryPanel({
     <div className="border-t border-[var(--surface-border)] bg-cream p-7 grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* Left: details + proof */}
       <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between mb-1">
-          <p className="font-display text-lg text-ink">Inquiry — {inq.ref}</p>
-          <button
-            onClick={onClose}
-            className="flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-mahogany cursor-pointer"
-          >
-            <Icon name="close" className="w-3.5 h-3.5" />
-            Close
-          </button>
-        </div>
+        <p className="font-display text-lg text-ink mb-1">Inquiry — {inq.ref}</p>
         <D label="Customer" value={`${inq.customerName} (${inq.customerEmail})`} />
         <D label="Phone" value={inq.customerPhone} />
         <D label="Date" value={`${inq.date} ${inq.time}`} />
@@ -316,6 +305,7 @@ export function AdminInquiryPanel({
                     </span>
                     <input
                       type="datetime-local"
+                      lang="en-GB"
                       min={toDatetimeLocal(new Date().toISOString())}
                       value={dueDate}
                       onChange={(e) => setDueDate(e.target.value)}

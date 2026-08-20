@@ -20,6 +20,9 @@ type Draft = { name: string; description: string; status: EntityStatus };
 export default function AdminAddonsPage() {
   const [addons, setAddons] = useState<AddOn[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  // Add-ons that have been opened at least once stay mounted (just collapsed)
+  // so re-closing them animates shut instead of vanishing.
+  const [openedIds, setOpenedIds] = useState<Set<string>>(new Set());
   const [adding, setAdding] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
@@ -95,7 +98,11 @@ export default function AdminAddonsPage() {
                 {addons.map((a, idx) => (
                   <Fragment key={a.id}>
                     <tr
-                      onClick={() => setOpenId(openId === a.id ? null : a.id)}
+                      onClick={() => {
+                        const willOpen = openId !== a.id;
+                        setOpenId(willOpen ? a.id : null);
+                        if (willOpen) setOpenedIds((s) => new Set(s).add(a.id));
+                      }}
                       onDragOver={(e) => {
                         e.preventDefault();
                         if (dragIndex !== null && overIndex !== idx) setOverIndex(idx);
@@ -156,28 +163,36 @@ export default function AdminAddonsPage() {
                         <Icon name="pencil" className="w-4 h-4 text-[var(--text-muted)] inline-block" />
                       </td>
                     </tr>
-                    {openId === a.id && (
-                      <tr>
-                        <td colSpan={5} className="p-0">
-                          <div className="border-t border-[var(--surface-border)] bg-cream p-7">
-                            <AddonForm
-                              initial={a}
-                              onSave={async (d) => {
-                                await api.patch(`/admin/addons/${a.id}`, d);
-                                setOpenId(null);
-                                load();
-                              }}
-                              onCancel={() => setOpenId(null)}
-                              onDelete={async () => {
-                                await api.del(`/admin/addons/${a.id}`);
-                                setOpenId(null);
-                                load();
-                              }}
-                            />
+                    <tr>
+                      <td colSpan={5} className="p-0">
+                        <div
+                          className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                            openId === a.id ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                          }`}
+                        >
+                          <div className="overflow-hidden">
+                            {openedIds.has(a.id) && (
+                              <div className="border-t border-[var(--surface-border)] bg-cream p-7">
+                                <AddonForm
+                                  initial={a}
+                                  onSave={async (d) => {
+                                    await api.patch(`/admin/addons/${a.id}`, d);
+                                    setOpenId(null);
+                                    load();
+                                  }}
+                                  onCancel={() => setOpenId(null)}
+                                  onDelete={async () => {
+                                    await api.del(`/admin/addons/${a.id}`);
+                                    setOpenId(null);
+                                    load();
+                                  }}
+                                />
+                              </div>
+                            )}
                           </div>
-                        </td>
-                      </tr>
-                    )}
+                        </div>
+                      </td>
+                    </tr>
                   </Fragment>
                 ))}
                 {addons.length === 0 && (

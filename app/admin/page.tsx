@@ -84,7 +84,10 @@ export default function AdminDashboard() {
           </p>
           <div className="flex items-end gap-3 h-48 border-b border-l border-[var(--surface-border)] px-2">
             {chart.series.map((s) => (
-              <div key={s.month} className="flex-1 h-full flex items-end group" title={`${s.month}: ${s.count}`}>
+              <div key={s.month} className="flex-1 h-full flex flex-col items-center justify-end group" title={`${s.month}: ${s.count}`}>
+                <span className="text-[10px] font-semibold text-ink/70 mb-1 tabular-nums">
+                  {s.count}
+                </span>
                 <div
                   className="w-full bg-[linear-gradient(180deg,var(--color-gold-light),var(--color-gold))] group-hover:brightness-110 transition-[height]"
                   style={{ height: `${(s.count / max) * 100}%`, minHeight: s.count > 0 ? 3 : 0 }}
@@ -136,6 +139,10 @@ export function InquiryTable({
 }) {
   const roomName = (id: string | null) =>
     rooms.find((r) => r.id === id)?.name ?? "—";
+  // Rows that have been opened at least once stay mounted (just collapsed)
+  // so re-closing them animates shut instead of vanishing, and reopening
+  // doesn't refetch.
+  const [openedRefs, setOpenedRefs] = useState<Set<string>>(new Set());
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[720px]">
@@ -155,7 +162,11 @@ export function InquiryTable({
           {rows.map((row) => (
             <Fragment key={row.ref}>
               <tr
-                onClick={() => setOpenRef(openRef === row.ref ? null : row.ref)}
+                onClick={() => {
+                  const willOpen = openRef !== row.ref;
+                  setOpenRef(willOpen ? row.ref : null);
+                  if (willOpen) setOpenedRefs((s) => new Set(s).add(row.ref));
+                }}
                 className={`border-b border-[var(--surface-border)] cursor-pointer hover:bg-cream/60 transition-colors ${
                   openRef === row.ref ? "bg-cream" : ""
                 }`}
@@ -174,19 +185,26 @@ export function InquiryTable({
                   <StatusBadge status={row.status} />
                 </td>
               </tr>
-              {openRef === row.ref && (
-                <tr>
-                  <td colSpan={5} className="p-0">
-                    <AdminInquiryPanel
-                      refId={row.ref}
-                      rooms={rooms}
-                      addons={addons}
-                      onChanged={onChanged}
-                      onClose={() => setOpenRef(null)}
-                    />
-                  </td>
-                </tr>
-              )}
+              <tr>
+                <td colSpan={5} className="p-0">
+                  <div
+                    className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                      openRef === row.ref ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                    }`}
+                  >
+                    <div className="overflow-hidden">
+                      {openedRefs.has(row.ref) && (
+                        <AdminInquiryPanel
+                          refId={row.ref}
+                          rooms={rooms}
+                          addons={addons}
+                          onChanged={onChanged}
+                        />
+                      )}
+                    </div>
+                  </div>
+                </td>
+              </tr>
             </Fragment>
           ))}
           {rows.length === 0 && (
