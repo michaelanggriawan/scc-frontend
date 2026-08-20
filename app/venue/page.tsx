@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { NavBar, Footer, FloatingWA } from "@/components/site";
+import { Footer, FloatingWA } from "@/components/site";
+import { AdminRedirectGuard } from "@/components/admin-redirect-guard";
 import { Btn, Icon, Reveal, SLabel, Spinner } from "@/components/ui";
 import { api } from "@/lib/api";
 import type { Room } from "@/lib/types";
@@ -24,7 +25,7 @@ export default function VenuePage() {
 
   return (
     <div className="bg-white min-h-screen">
-      <NavBar />
+      <AdminRedirectGuard />
       <FloatingWA />
 
       <main id="main">

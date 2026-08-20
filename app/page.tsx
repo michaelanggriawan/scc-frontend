@@ -1,10 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import { NavBar, Footer, FloatingWA } from "@/components/site";
+import { Footer, FloatingWA } from "@/components/site";
+import { AdminRedirectGuard } from "@/components/admin-redirect-guard";
 import {
   AnimatedStat,
   Btn,
-  Divider,
   Icon,
   Reveal,
   SLabel,
@@ -147,7 +147,7 @@ function initials(name: string) {
 export default function HomePage() {
   return (
     <div className="bg-white min-h-screen">
-      <NavBar />
+      <AdminRedirectGuard />
       <FloatingWA />
 
       <main id="main">
@@ -437,8 +437,7 @@ export default function HomePage() {
               </div>
               <div>
                 <SLabel>Getting Here</SLabel>
-                <Divider className="mb-4 max-w-[120px]" />
-                <ul className="flex flex-col gap-3">
+                <ul className="flex flex-col gap-3 mt-4">
                   {GETTING_HERE.map((line) => (
                     <li key={line} className="flex items-start gap-2.5">
                       <Icon name="car" className="w-4 h-4 mt-0.5 text-gold-dim flex-shrink-0" />

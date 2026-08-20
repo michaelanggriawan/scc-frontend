@@ -7,6 +7,7 @@ import "@fontsource-variable/playfair-display";
 import "@fontsource-variable/playfair-display/wght-italic.css";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
+import { NavBar } from "@/components/site";
 
 export const metadata: Metadata = {
   title: "SCC Venue — Serpong Convention Center",
@@ -25,7 +26,10 @@ export default function RootLayout({
         <a href="#main" className="skip-link">
           Skip to content
         </a>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <NavBar />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

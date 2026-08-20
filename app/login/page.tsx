@@ -4,7 +4,6 @@ import { Suspense, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { NavBar } from "@/components/site";
 import { Alert, Btn, Icon, TextField } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { ApiError } from "@/lib/api";
@@ -35,7 +34,6 @@ function LoginContent() {
 
   return (
     <div className="bg-white min-h-screen">
-      <NavBar />
       <main id="main" className="flex min-h-[calc(100vh-80px)]">
         <div className="hidden lg:block relative w-[42%] flex-shrink-0">
           <Image

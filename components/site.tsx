@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import type { VenueInfo } from '@/lib/types';
@@ -15,36 +15,68 @@ const NAV_LINKS = [
   ['Booking', '/booking'],
 ] as const;
 
+// Every route that shows this nav — rendered once from the root layout (see
+// app/layout.tsx) rather than per-page, so it's the SAME mounted component
+// across a navigation instead of a fresh instance with no prior state to
+// animate from (which is why the underline used to just teleport). Routes
+// not in this list (admin, the standalone /pay page) render nothing.
+const NAVBAR_ROUTES = ['/', '/venue', '/booking', '/login', '/register', '/profile'];
+
 export function NavBar() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  // One shared underline that slides between links, rather than each link
+  // mounting/unmounting its own — measured off the active link's own DOM
+  // node so it tracks real widths (e.g. "Booking" vs "Home") automatically.
+  const linkRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
+  const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
+
+  useEffect(() => {
+    const active = NAV_LINKS.find(([, href]) => href === pathname);
+    const el = active ? linkRefs.current[active[1]] : null;
+    setIndicator(el ? { left: el.offsetLeft, width: el.offsetWidth } : null);
+  }, [pathname]);
+
+  if (!NAVBAR_ROUTES.includes(pathname ?? '')) return null;
 
   return (
     <nav className="relative h-20 bg-white/95 backdrop-blur border-b border-mahogany/10 flex items-center justify-between px-6 md:px-16 gap-8 sticky top-0 z-40">
       <Link href="/" className="flex items-center gap-3 flex-shrink-0">
         <Image src="/logo-hd.png" alt="SCC Serpong" width={168} height={112} className="h-12 w-auto object-contain" priority />
       </Link>
-      <div className="hidden md:flex items-center gap-10 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-        {NAV_LINKS.map(([label, href]) => {
-          const active = pathname === href;
-          return (
-            <Link
-              key={label}
-              href={href}
-              className={`relative text-base tracking-wide py-1 transition-colors ${
-                active ? 'text-mahogany' : 'text-ink/65 hover:text-ink'
-              }`}
-            >
-              {label}
-              {active && (
-                <span className="absolute -bottom-1 left-0 right-0 h-px bg-gold" />
-              )}
-            </Link>
-          );
-        })}
-      </div>
+      {user?.role !== 'admin' && (
+        <div className="hidden md:flex items-center gap-10 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+          {NAV_LINKS.map(([label, href]) => {
+            const active = pathname === href;
+            return (
+              <Link
+                key={label}
+                href={href}
+                ref={(el) => {
+                  linkRefs.current[href] = el;
+                }}
+                className={`text-base tracking-wide py-1 transition-colors ${
+                  active ? 'text-mahogany' : 'text-ink/65 hover:text-ink'
+                }`}
+              >
+                {label}
+              </Link>
+            );
+          })}
+          {indicator && (
+            <span
+              className="absolute -bottom-1 left-0 h-[2px] bg-gold transition-[transform,width] duration-300 will-change-transform"
+              style={{
+                width: indicator.width,
+                transform: `translateX(${indicator.left}px)`,
+                transitionTimingFunction: 'cubic-bezier(0.2, 0, 0, 1)',
+              }}
+            />
+          )}
+        </div>
+      )}
       <div className="hidden md:flex items-center gap-3 flex-shrink-0">
         {user ? (
           <>
@@ -90,16 +122,17 @@ export function NavBar() {
 
       {open && (
         <div className="md:hidden absolute top-20 left-0 right-0 bg-white border-b border-mahogany/10 flex flex-col px-6 py-6 gap-5 z-40 shadow-lg">
-          {NAV_LINKS.map(([label, href]) => (
-            <Link
-              key={label}
-              href={href}
-              onClick={() => setOpen(false)}
-              className={`text-sm ${pathname === href ? 'text-mahogany font-semibold' : 'text-ink/75'}`}
-            >
-              {label}
-            </Link>
-          ))}
+          {user?.role !== 'admin' &&
+            NAV_LINKS.map(([label, href]) => (
+              <Link
+                key={label}
+                href={href}
+                onClick={() => setOpen(false)}
+                className={`text-sm ${pathname === href ? 'text-mahogany font-semibold' : 'text-ink/75'}`}
+              >
+                {label}
+              </Link>
+            ))}
           <div className="h-px bg-mahogany/10" />
           {user ? (
             <>
@@ -224,7 +257,7 @@ export function Footer() {
                   {venue?.name || 'SCC Venue'}
                 </span>
               )}
-              {venue?.phone ? (
+              {venue?.phone && (
                 <a
                   href={`tel:${venue.phone}`}
                   className="flex items-center gap-2 hover:text-gold transition-colors"
@@ -232,13 +265,8 @@ export function Footer() {
                   <Icon name="phone" className="w-4 h-4 text-gold-dim flex-shrink-0" />
                   {venue.phone}
                 </a>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <Icon name="phone" className="w-4 h-4 text-gold-dim flex-shrink-0" />
-                  —
-                </span>
               )}
-              {venue?.email ? (
+              {venue?.email && (
                 <a
                   href={`mailto:${venue.email}`}
                   className="flex items-center gap-2 hover:text-gold transition-colors"
@@ -246,11 +274,6 @@ export function Footer() {
                   <Icon name="mail" className="w-4 h-4 text-gold-dim flex-shrink-0" />
                   {venue.email}
                 </a>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <Icon name="mail" className="w-4 h-4 text-gold-dim flex-shrink-0" />
-                  —
-                </span>
               )}
             </div>
           </div>
@@ -270,26 +293,28 @@ export function Footer() {
               </Link>
             </div>
           </div>
-          <div>
-            <p className="text-[10px] font-semibold text-gold uppercase tracking-[0.2em] mb-4">
-              Follow Us
-            </p>
-            <div className="flex items-center gap-3">
-              {socials.map(([name, url]) =>
-                url ? (
-                  <a
-                    key={name}
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-9 h-9 flex items-center justify-center border border-[var(--surface-border-strong)] text-gold-dim hover:text-gold hover:border-gold transition-colors"
-                  >
-                    <Icon name={name} className="w-4 h-4" />
-                  </a>
-                ) : null,
-              )}
+          {socials.some(([, url]) => url) && (
+            <div>
+              <p className="text-[10px] font-semibold text-gold uppercase tracking-[0.2em] mb-4">
+                Follow Us
+              </p>
+              <div className="flex items-center gap-3">
+                {socials.map(([name, url]) =>
+                  url ? (
+                    <a
+                      key={name}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-9 h-9 flex items-center justify-center border border-[var(--surface-border-strong)] text-gold-dim hover:text-gold hover:border-gold transition-colors"
+                    >
+                      <Icon name={name} className="w-4 h-4" />
+                    </a>
+                  ) : null,
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
         <div className="border-t border-[var(--surface-border)] pt-6 text-xs text-custard/40">
           © {new Date().getFullYear()} Serpong Convention Center. All rights reserved.

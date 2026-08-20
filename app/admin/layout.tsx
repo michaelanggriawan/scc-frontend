@@ -20,14 +20,16 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, justLoggedOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== "admin")) router.replace("/login");
-  }, [loading, user, router]);
+    if (!loading && (!user || user.role !== "admin") && !justLoggedOut()) {
+      router.replace("/login");
+    }
+  }, [loading, user, router, justLoggedOut]);
 
   // Close the mobile drawer whenever the route changes.
   useEffect(() => {
@@ -82,26 +84,6 @@ export default function AdminLayout({
           );
         })}
       </nav>
-      <div className="px-6 py-6 border-t border-custard/10 flex flex-col gap-3">
-        <Link
-          href="/"
-          onClick={() => setNavOpen(false)}
-          className="flex items-center gap-2 text-xs text-custard/45 hover:text-gold transition-colors"
-        >
-          <Icon name="arrowLeft" className="w-3.5 h-3.5" />
-          Public site
-        </Link>
-        <button
-          onClick={() => {
-            logout();
-            router.push("/");
-          }}
-          className="flex items-center gap-2 text-xs text-custard/45 hover:text-gold text-left cursor-pointer transition-colors"
-        >
-          <Icon name="logout" className="w-3.5 h-3.5" />
-          Log Out
-        </button>
-      </div>
     </>
   );
 

@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { NavBar, Footer, FloatingWA } from "@/components/site";
+import { Footer, FloatingWA } from "@/components/site";
 import {
   Alert,
   Btn,
@@ -42,24 +42,23 @@ export default function ProfilePage() {
 }
 
 function ProfileContent() {
-  const { user, loading, refresh } = useAuth();
+  const { user, loading, refresh, justLoggedOut } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const tab: "account" | "bookings" =
     searchParams.get("tab") === "bookings" ? "bookings" : "account";
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && !justLoggedOut()) {
       const next = tab === "bookings" ? "/profile?tab=bookings" : "/profile";
       router.replace(`/login?next=${encodeURIComponent(next)}`);
     }
-  }, [loading, user, router, tab]);
+  }, [loading, user, router, tab, justLoggedOut]);
 
   if (loading || !user) return <Spinner label="Loading your profile…" />;
 
   return (
     <div className="bg-white min-h-screen">
-      <NavBar />
       <FloatingWA />
       <div className="max-w-screen-xl mx-auto px-6 md:px-16 py-12">
         <div className="flex items-center gap-4 mb-10">
