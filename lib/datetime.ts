@@ -19,13 +19,15 @@ export function defaultDueDateLocal(): string {
   return toDatetimeLocal(d.toISOString());
 }
 
-// "HH:MM" -> minutes since midnight, or null if malformed.
+// "HH:MM" -> minutes since midnight, or null if malformed. Hours aren't
+// capped at 23 — a booking that runs past midnight is reported with an
+// unwrapped end time (e.g. "25:00"), see minutesToTime below.
 export function parseTimeToMinutes(time: string): number | null {
   const m = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
   if (!m) return null;
   const hours = Number(m[1]);
   const minutes = Number(m[2]);
-  if (hours > 23 || minutes > 59) return null;
+  if (minutes > 59) return null;
   return hours * 60 + minutes;
 }
 

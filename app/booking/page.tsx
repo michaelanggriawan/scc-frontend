@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { NavBar, Footer, FloatingWA } from "@/components/site";
+import { Footer, FloatingWA } from "@/components/site";
+import { AdminRedirectGuard } from "@/components/admin-redirect-guard";
 import {
   Alert,
   Btn,
@@ -20,17 +21,21 @@ import {
 import { RoomGalleryLightbox } from "@/components/room-gallery-lightbox";
 import { api, ApiError, fileUrl } from "@/lib/api";
 import { SchedulePicker } from "@/components/schedule-picker";
-import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
   blockNonDigitKeys,
   blockNonDigitPaste,
+  isValidEmail,
+  isValidPhone,
   minBookingDate,
 } from "@/lib/validation";
-import type { AddOn, Room } from "@/lib/types";
-import { overlapsBookedRange, snapToHalfHour } from "@/lib/datetime";
-import { isValidEmail, isValidPhone, minBookingDate } from "@/lib/validation";
 import type { AddOn, BookedRange, Room } from "@/lib/types";
+import {
+  minutesToTime,
+  overlapsBookedRange,
+  parseTimeToMinutes,
+  snapToHalfHour,
+} from "@/lib/datetime";
 
 const MIN_DATE = minBookingDate();
 const DRAFT_KEY = "scc_booking_draft";
@@ -215,7 +220,7 @@ export default function BookingPage() {
   if (successRef) {
     return (
       <div className="bg-white min-h-screen">
-        <NavBar />
+        <AdminRedirectGuard />
         <div className="max-w-lg mx-auto px-6 py-24">
           <Reveal className="relative border border-[var(--surface-border)] bg-[var(--surface)] p-10 text-center flex flex-col items-center gap-4">
             <span className="absolute top-0 left-10 right-10 h-px bg-[linear-gradient(90deg,transparent,var(--color-gold),transparent)]" />
@@ -247,11 +252,11 @@ export default function BookingPage() {
 
   return (
     <div className="bg-white min-h-screen">
-      <NavBar />
+      <AdminRedirectGuard />
       <FloatingWA />
 
       <div className="max-w-screen-xl mx-auto px-6 md:px-16 py-12 flex flex-col lg:flex-row gap-10 items-start">
-        <div className="flex-1 flex flex-col gap-12 w-full">
+        <div className="flex-1 min-w-0 flex flex-col gap-12 w-full">
           <Reveal>
             <SLabel>Inquiry Form</SLabel>
             <h1 className="font-display text-3xl md:text-4xl italic text-ink">
@@ -434,7 +439,11 @@ export default function BookingPage() {
             <Row label="Category" value={category} />
             <Row label="Date" value={date} />
             <Row label="Start time" value={time} />
-            <Row label="Duration" value={duration} />
+            <Row label="End time" value={computeEndTime(time, duration)} />
+            <Row
+              label="Duration"
+              value={duration ? `${duration} ${duration === "1" ? "hour" : "hours"}` : undefined}
+            />
             <Row
               label="Add-ons"
               value={
@@ -540,11 +549,25 @@ function FormSection({
   );
 }
 
+function computeEndTime(time: string, duration: string): string | undefined {
+  const start = parseTimeToMinutes(time);
+  const durationHours = Number(duration);
+  if (start == null || !Number.isFinite(durationHours) || durationHours <= 0) {
+    return undefined;
+  }
+  const end = start + durationHours * 60;
+  // A booking that runs past midnight keeps a real wall-clock label, plus a
+  // day marker — "26:00" reads as a typo to a customer, "02:00 (+1 day)" doesn't.
+  const days = Math.floor(end / 1440);
+  const clock = minutesToTime(end - days * 1440);
+  return days > 0 ? `${clock} (+${days} day${days > 1 ? "s" : ""})` : clock;
+}
+
 function Row({ label, value }: { label: string; value?: string }) {
   return (
     <div className="flex justify-between gap-2">
       <span className="text-ink/50 flex-shrink-0">{label}</span>
-      <span className="font-semibold text-ink text-right">
+      <span className="font-semibold text-ink text-right break-words min-w-0">
         {value || "— not set —"}
       </span>
     </div>

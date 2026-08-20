@@ -92,6 +92,12 @@ function addDays(s: string, n: number): string {
 function todayStr(): string {
   return toDateStr(new Date());
 }
+// Whole days between two "YYYY-MM-DD" strings (b - a) — used to place a click
+// on a different day than the anchor onto the same minutes-since-anchor-
+// midnight timeline so a range can span the boundary between them.
+function daysBetween(a: string, b: string): number {
+  return Math.round((fromDateStr(b).getTime() - fromDateStr(a).getTime()) / 86400000);
+}
 
 function monthBounds(month: Date): { from: string; to: string } {
   const first = new Date(month.getFullYear(), month.getMonth(), 1);
@@ -100,8 +106,9 @@ function monthBounds(month: Date): { from: string; to: string } {
 }
 
 const SLOT_STEP_MIN = 60;
-const DAY_START_MIN = 7 * 60; // 07:00
+const DAY_START_MIN = 0; // 00:00 — every hour of every day is fresh-bookable
 const DAY_END_MIN = 24 * 60; // midnight
+const DEFAULT_SCROLL_HOUR_MIN = 7 * 60; // 07:00 — default scroll position, not a hard floor
 const ROW_HEIGHT = 48;
 const VISIBLE_DAYS = 6;
 const COL_WIDTH = 108;
@@ -156,11 +163,35 @@ export function SchedulePicker({
   const [rangesCache, setRangesCache] = useState<Record<string, BookedRange[]>>({});
   const [loadingDates, setLoadingDates] = useState<Record<string, boolean>>({});
   const [dragState, setDragState] = useState<{ date: string; start: number; end: number } | null>(null);
+  // Set by a plain (non-drag) click, so a second plain click — on the same
+  // day or a later/earlier one — extends it into a range: click Sep 1 23:00
+  // then Sep 2 01:00 selects Sep 1 23:00 through Sep 2 02:00 (3h). Any click
+  // that isn't extending an anchor starts a fresh one.
+  const [clickAnchor, setClickAnchor] = useState<{ date: string; start: number } | null>(null);
 
   const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const dragStartRef = useRef<number | null>(null);
   const dragRangeRef = useRef<{ start: number; end: number } | null>(null);
   const didDragRef = useRef(false);
+  // The grid holds all 24 hours, but most bookings start around normal
+  // opening time — land scrolled to 07:00 by default, with 00:00–06:00 still
+  // reachable by scrolling up.
+  const gridScrollRef = useRef<HTMLDivElement>(null);
+  const stickyHeaderRef = useRef<HTMLDivElement | null>(null);
+  const defaultScrollRowRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!gridScrollRef.current || !defaultScrollRowRef.current) return;
+    const containerTop = gridScrollRef.current.getBoundingClientRect().top;
+    const rowTop = defaultScrollRowRef.current.getBoundingClientRect().top;
+    // The day header is sticky *within this same container*, so landing the
+    // row flush with the container's top would tuck it behind the header —
+    // offset by the header's own height so 07:00 lands just below it.
+    const headerHeight = stickyHeaderRef.current?.getBoundingClientRect().height ?? 0;
+    gridScrollRef.current.scrollTop += rowTop - containerTop - headerHeight;
+    // Only ever set the initial position — must not fight the user's own
+    // scrolling on later re-renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Reset cached availability when the room changes — a different room's
   // bookings have nothing to do with the previous one's.
@@ -314,6 +345,7 @@ export function SchedulePicker({
         onDateChange(colDate);
         onTimeChange(minutesToTime(start));
         onDurationChange(String(hours));
+        setClickAnchor(null);
       }
       setDragState(null);
       dragStartRef.current = null;
@@ -325,6 +357,13 @@ export function SchedulePicker({
 
   const overlap = time && date ? overlapsBookedRange(time, durationHours, rangesFor(date)) : null;
   const canGoPrev = addDays(windowStart, -1) >= min;
+  // The saved selection's start/end expressed as minutes from `date`'s own
+  // midnight (end can exceed 1440 for an overnight booking) — each column
+  // below converts this onto its own day via `dayOffset` so a selection that
+  // spans days highlights correctly in every column it touches.
+  const selStartAbs = date && time ? parseTimeToMinutes(time) : null;
+  const selEndAbs =
+    selStartAbs != null && durationHours > 0 ? selStartAbs + durationHours * 60 : null;
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -375,15 +414,20 @@ export function SchedulePicker({
               <Icon name="arrowLeft" className="w-4 h-4" />
             </button>
 
-            <div className="flex-1 min-w-0 overflow-auto" style={{ maxHeight: 520 }}>
+            <div
+              ref={gridScrollRef}
+              className="flex-1 min-w-0 overflow-auto"
+              style={{ maxHeight: 520 }}
+            >
               <div className="flex" style={{ minWidth: VISIBLE_DAYS * COL_WIDTH }}>
-                {visibleDates.map((d) => {
+                {visibleDates.map((d, colIndex) => {
                   const dObj = fromDateStr(d);
                   const isSelectedCol = d === date;
                   const isToday = d === todayStr();
-                  const selStart = isSelectedCol && time ? parseTimeToMinutes(time) : null;
-                  const selEnd =
-                    selStart != null && durationHours > 0 ? selStart + durationHours * 60 : null;
+                  // This column's own hours (0..1440), translated onto the
+                  // selection's `date`-relative timeline.
+                  const dayOffset = date ? daysBetween(date, d) : null;
+                  const colOffsetMin = dayOffset != null ? dayOffset * 1440 : null;
                   const colLoading = !!loadingDates[d];
 
                   return (
@@ -392,7 +436,10 @@ export function SchedulePicker({
                       className="flex flex-col flex-shrink-0 border-r border-[var(--surface-border)] last:border-r-0"
                       style={{ width: COL_WIDTH }}
                     >
-                      <div className="sticky top-0 z-10 flex flex-col items-center justify-center gap-1 py-2.5 bg-[var(--surface)] border-b border-[var(--surface-border)]">
+                      <div
+                        ref={colIndex === 0 ? stickyHeaderRef : undefined}
+                        className="sticky top-0 z-10 flex flex-col items-center justify-center gap-1 py-2.5 bg-[var(--surface)] border-b border-[var(--surface-border)]"
+                      >
                         <span className="text-[10px] font-semibold uppercase tracking-wide text-ink/40">
                           {dObj.toLocaleDateString("en-GB", { weekday: "short" })}
                         </span>
@@ -419,12 +466,19 @@ export function SchedulePicker({
                           const booked = isSlotBooked(d, m);
                           const inDrag =
                             dragState != null && dragState.date === d && m >= dragState.start && m < dragState.end;
+                          const abs = colOffsetMin != null ? colOffsetMin + m : null;
                           const inSelection =
-                            !dragState && selStart != null && selEnd != null && m >= selStart && m < selEnd;
+                            !dragState &&
+                            abs != null &&
+                            selStartAbs != null &&
+                            selEndAbs != null &&
+                            abs >= selStartAbs &&
+                            abs < selEndAbs;
 
                           return (
                             <div
                               key={m}
+                              ref={colIndex === 0 && m === DEFAULT_SCROLL_HOUR_MIN ? defaultScrollRowRef : undefined}
                               style={{ height: ROW_HEIGHT }}
                               className="flex items-center justify-center border-b border-[var(--surface-border)] last:border-b-0"
                             >
@@ -436,16 +490,36 @@ export function SchedulePicker({
                                   onMouseDown={() => handleSlotMouseDown(d, m)}
                                   onClick={() => {
                                     if (didDragRef.current) return;
-                                    onDateChange(d);
-                                    onTimeChange(minutesToTime(m));
-                                    onDurationChange("1");
+                                    const anchor = clickAnchor;
+                                    if (anchor && (anchor.date !== d || anchor.start !== m)) {
+                                      // Second click — possibly on a different
+                                      // day — extends the first into a range,
+                                      // e.g. Sep 1 23:00 then Sep 2 01:00 ->
+                                      // Sep 1 23:00 through Sep 2 02:00 (3h).
+                                      const anchorAbs = anchor.start;
+                                      const clickAbs = daysBetween(anchor.date, d) * 1440 + m;
+                                      const startAbs = Math.min(anchorAbs, clickAbs);
+                                      const endAbs = Math.max(anchorAbs, clickAbs) + SLOT_STEP_MIN;
+                                      const hours = Math.max(1, Math.round((endAbs - startAbs) / 60));
+                                      const startDayOffset = Math.floor(startAbs / 1440);
+                                      const startMinute = ((startAbs % 1440) + 1440) % 1440;
+                                      onDateChange(addDays(anchor.date, startDayOffset));
+                                      onTimeChange(minutesToTime(startMinute));
+                                      onDurationChange(String(hours));
+                                      setClickAnchor(null);
+                                    } else {
+                                      onDateChange(d);
+                                      onTimeChange(minutesToTime(m));
+                                      onDurationChange("1");
+                                      setClickAnchor({ date: d, start: m });
+                                    }
                                   }}
                                   className={`w-[88%] h-9 rounded-full border text-xs font-medium tabular-nums cursor-pointer transition-colors duration-100 flex items-center justify-center ${
                                     inDrag
                                       ? "border-2 border-dashed border-gold bg-gold/30 text-mahogany-2 font-semibold"
                                       : inSelection
                                         ? `border-gold bg-gold/40 text-mahogany-2 font-semibold ${
-                                            overlap && isSelectedCol ? "ring-1 ring-danger" : ""
+                                            overlap ? "ring-1 ring-danger" : ""
                                           }`
                                         : "border-[var(--surface-border-strong)] text-mahogany hover:border-gold-dim hover:bg-gold/10"
                                   }`}
