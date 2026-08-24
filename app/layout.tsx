@@ -13,6 +13,9 @@ export const metadata: Metadata = {
   title: "SCC Venue — Serpong Convention Center",
   description:
     "Book the Serpong Convention Center: a column-free, gold-standard venue for conferences, exhibitions, summits, and live productions.",
+  verification: {
+    google: "p2ylMgelQSp6zVtUynqyywKaRaO2aRZdCPkVCmutBA4",
+  },
 };
 
 export default function RootLayout({
