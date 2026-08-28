@@ -152,18 +152,18 @@ export default function HomePage() {
 
       <main id="main">
         {/* Hero */}
-        <section className="relative w-full h-[640px] flex items-end">
+        <section className="relative w-full h-[calc(100vh-5rem)] min-h-[640px] flex items-center">
           <Image
-            src="/hero.png"
+            src="/hero-2.png"
             alt="Serpong Convention Center — full pillar-free main hall"
             fill
             priority
             sizes="100vw"
-            className="object-cover object-[center_75%]"
+            className="object-cover object-[center_65%]"
           />
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(42,2,1,0.35)_0%,rgba(42,2,1,0.55)_55%,rgba(42,2,1,0.96)_100%)]" />
           <div className="grain-overlay" />
-          <Reveal className="relative w-full max-w-screen-xl mx-auto px-6 md:px-16 pb-20">
+          <Reveal className="relative w-full max-w-screen-xl mx-auto px-6 md:px-16">
             <p className="flex items-center gap-2.5 text-xs font-semibold uppercase tracking-[0.28em] text-gold-light mb-5">
               <span className="w-8 h-px bg-gold-light" />
               <span style={{ color: '#fff134', textShadow: '0 1px 8px rgba(231, 185, 63, 0.25)' }}>
