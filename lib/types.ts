@@ -132,6 +132,17 @@ export interface NotificationPrefs {
   dailySummary: boolean;
 }
 
+export interface GalleryPhoto {
+  id: string;
+  url: string;
+  posX: number;
+  posY: number;
+}
+
+export interface GalleryInfo {
+  photos: GalleryPhoto[];
+}
+
 export interface PayPageData {
   ref: string;
   status: InquiryStatus;

@@ -31,7 +31,7 @@ export default function VenuePage() {
       <main id="main">
         <section className="relative w-full h-[380px]">
           <Image
-            src="https://picsum.photos/seed/scc-venue-hero/1600/700"
+            src="/room1.png"
             alt=""
             fill
             priority
