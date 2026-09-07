@@ -1,5 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Footer, FloatingWA } from "@/components/site";
 import { AdminRedirectGuard } from "@/components/admin-redirect-guard";
 import {
@@ -10,6 +13,8 @@ import {
   SLabel,
   SWrap,
 } from "@/components/ui";
+import { api, fileUrl } from "@/lib/api";
+import type { GalleryInfo, GalleryPhoto } from "@/lib/types";
 
 const VENUE_MAPS_URL =
   "https://maps.google.com/?cid=15856071987079643264&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQ";
@@ -144,7 +149,49 @@ function initials(name: string) {
     .toUpperCase();
 }
 
+const FALLBACK_GALLERY_SEEDS = ["main-hall", "stage-rig", "led-wall", "vip-lounge"];
+
 export default function HomePage() {
+  const [galleryPhotos, setGalleryPhotos] = useState<GalleryPhoto[] | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    api
+      .get<GalleryInfo>("/public/gallery")
+      .then((res) => setGalleryPhotos(res.photos))
+      .catch(() => setGalleryPhotos([]));
+  }, []);
+
+  const galleryImages =
+    galleryPhotos && galleryPhotos.length > 0
+      ? galleryPhotos.map((photo) => ({
+          key: photo.id,
+          src: fileUrl(photo.url),
+          posX: photo.posX,
+          posY: photo.posY,
+        }))
+      : FALLBACK_GALLERY_SEEDS.map((seed) => ({
+          key: seed,
+          src: `https://picsum.photos/seed/scc-${seed}/640/640`,
+          posX: 50,
+          posY: 50,
+        }));
+
+  useEffect(() => {
+    if (lightboxIndex === null) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLightboxIndex(null);
+      if (e.key === "ArrowRight")
+        setLightboxIndex((i) => (i === null ? i : (i + 1) % galleryImages.length));
+      if (e.key === "ArrowLeft")
+        setLightboxIndex((i) =>
+          i === null ? i : (i - 1 + galleryImages.length) % galleryImages.length
+        );
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [lightboxIndex, galleryImages.length]);
+
   return (
     <div className="bg-white min-h-screen">
       <AdminRedirectGuard />
@@ -326,25 +373,82 @@ export default function HomePage() {
               Inside the Hall
             </h2>
           </Reveal>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {["main-hall", "stage-rig", "led-wall", "vip-lounge"].map((seed, i) => (
+          <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory -mx-6 px-6 md:mx-0 md:px-0">
+            {galleryImages.map((img, i) => (
               <Reveal
-                key={seed}
+                key={img.key}
                 delay={i * 90}
-                className="relative h-52 overflow-hidden border border-mahogany/12 group"
+                className="relative h-52 w-64 md:w-72 flex-shrink-0 overflow-hidden border border-mahogany/12 group snap-start"
               >
-                <Image
-                  src={`https://picsum.photos/seed/scc-${seed}/640/640`}
-                  alt=""
-                  fill
-                  sizes="(min-width: 768px) 25vw, 50vw"
-                  className="object-cover [filter:sepia(0.45)_saturate(1.5)_hue-rotate(-28deg)_brightness(0.75)_contrast(1.05)] transition-transform duration-500 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-mahogany-2/10 group-hover:bg-mahogany-2/0 transition-colors" />
+                <button
+                  type="button"
+                  onClick={() => setLightboxIndex(i)}
+                  className="absolute inset-0 w-full h-full cursor-zoom-in"
+                  aria-label="View full image"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={img.src}
+                    alt=""
+                    style={{ objectPosition: `${img.posX}% ${img.posY}%` }}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-mahogany-2/10 group-hover:bg-mahogany-2/0 transition-colors" />
+                </button>
               </Reveal>
             ))}
           </div>
         </SWrap>
+
+        {lightboxIndex !== null && (
+          <div
+            className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center px-4"
+            onClick={() => setLightboxIndex(null)}
+          >
+            <button
+              type="button"
+              onClick={() => setLightboxIndex(null)}
+              aria-label="Close"
+              className="absolute top-5 right-5 md:top-8 md:right-8 text-white/80 hover:text-white w-10 h-10 flex items-center justify-center text-3xl leading-none"
+            >
+              &times;
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIndex((i) =>
+                  i === null ? i : (i - 1 + galleryImages.length) % galleryImages.length
+                );
+              }}
+              aria-label="Previous image"
+              className="absolute left-2 md:left-8 top-1/2 -translate-y-1/2 text-white/80 hover:text-white w-12 h-12 flex items-center justify-center text-4xl leading-none"
+            >
+              &#8249;
+            </button>
+
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={galleryImages[lightboxIndex].src}
+              alt=""
+              onClick={(e) => e.stopPropagation()}
+              className="max-w-full max-h-[85vh] object-contain"
+            />
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIndex((i) => (i === null ? i : (i + 1) % galleryImages.length));
+              }}
+              aria-label="Next image"
+              className="absolute right-2 md:right-8 top-1/2 -translate-y-1/2 text-white/80 hover:text-white w-12 h-12 flex items-center justify-center text-4xl leading-none"
+            >
+              &#8250;
+            </button>
+          </div>
+        )}
 
         {/* Testimonials */}
         <SWrap bg="bg-cream border-y border-mahogany/10">

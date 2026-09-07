@@ -249,6 +249,17 @@ function RoomForm({
   }
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
+  const [dragPhotoIndex, setDragPhotoIndex] = useState<number | null>(null);
+
+  function reorderPhotos(from: number, to: number) {
+    if (from === to) return;
+    setD((prev) => {
+      const photos = [...prev.photos];
+      const [moved] = photos.splice(from, 1);
+      photos.splice(to, 0, moved);
+      return { ...prev, photos };
+    });
+  }
 
   function updateSpec(i: number, patch: Partial<RoomSpec>) {
     setD((prev) => ({
@@ -397,16 +408,33 @@ function RoomForm({
         </span>
         {d.photos.length > 0 && (
           <div className="flex flex-wrap gap-3">
-            {d.photos.map((url) => (
+            {d.photos.map((url, i) => (
               <div
                 key={url}
-                className="relative w-24 h-24 flex-shrink-0 border border-[var(--surface-border)] bg-white"
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.effectAllowed = "move";
+                  setDragPhotoIndex(i);
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (dragPhotoIndex !== null && dragPhotoIndex !== i) {
+                    reorderPhotos(dragPhotoIndex, i);
+                    setDragPhotoIndex(i);
+                  }
+                }}
+                onDragEnd={() => setDragPhotoIndex(null)}
+                className={`relative w-24 h-24 flex-shrink-0 border border-[var(--surface-border)] bg-white cursor-grab active:cursor-grabbing ${
+                  dragPhotoIndex === i ? "opacity-40" : ""
+                }`}
+                title="Drag to reorder"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={fileUrl(url)}
                   alt="Room photo"
-                  className="w-full h-full object-cover"
+                  draggable={false}
+                  className="w-full h-full object-cover pointer-events-none"
                 />
                 <button
                   onClick={() => removePhoto(url)}

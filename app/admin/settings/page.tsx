@@ -21,20 +21,29 @@ import {
   isValidUploadSize,
   MAX_UPLOAD_MB,
 } from "@/lib/validation";
-import type { NotificationPrefs, PaymentInfo, VenueInfo } from "@/lib/types";
+import type {
+  GalleryInfo,
+  GalleryPhoto,
+  NotificationPrefs,
+  PaymentInfo,
+  VenueInfo,
+} from "@/lib/types";
 
 export default function AdminSettingsPage() {
   const [venue, setVenue] = useState<VenueInfo | null>(null);
   const [payment, setPayment] = useState<PaymentInfo | null>(null);
   const [notif, setNotif] = useState<NotificationPrefs | null>(null);
+  const [gallery, setGallery] = useState<GalleryInfo | null>(null);
 
   useEffect(() => {
     api.get<VenueInfo>("/admin/settings/venue").then(setVenue);
     api.get<PaymentInfo>("/admin/settings/payment").then(setPayment);
     api.get<NotificationPrefs>("/admin/settings/notifications").then(setNotif);
+    api.get<GalleryInfo>("/admin/settings/gallery").then(setGallery);
   }, []);
 
-  if (!venue || !payment || !notif) return <Spinner label="Loading settings…" />;
+  if (!venue || !payment || !notif || !gallery)
+    return <Spinner label="Loading settings…" />;
 
   return (
     <>
@@ -42,6 +51,7 @@ export default function AdminSettingsPage() {
       <div className="px-4 md:px-8 py-6 md:py-8 flex flex-col gap-8 max-w-2xl">
         <VenueSection initial={venue} />
         <PaymentSection initial={payment} />
+        <GallerySection initial={gallery} />
         <NotifSection initial={notif} />
       </div>
     </>
@@ -241,6 +251,138 @@ function PaymentSection({ initial }: { initial: PaymentInfo }) {
       <div>
         <Btn sm disabled={busy} onClick={() => save(() => api.put("/admin/settings/payment", p))}>
           Save payment info
+        </Btn>
+      </div>
+    </div>
+  );
+}
+
+function GallerySection({ initial }: { initial: GalleryInfo }) {
+  const [g, setG] = useState(initial);
+  const { msg, err, setErr, busy, save } = useSaver();
+  const [uploading, setUploading] = useState(false);
+  const [dragId, setDragId] = useState<string | null>(null);
+
+  async function uploadPhotos(files: FileList) {
+    setErr("");
+    for (const file of Array.from(files)) {
+      if (!isValidUploadSize(file)) {
+        setErr(`Each photo must be ${MAX_UPLOAD_MB} MB or smaller.`);
+        continue;
+      }
+      setUploading(true);
+      try {
+        const res = await api.upload<{ fileUrl: string }>(
+          "/admin/uploads/gallery-photo",
+          file,
+        );
+        const photo: GalleryPhoto = {
+          id:
+            typeof crypto !== "undefined" && "randomUUID" in crypto
+              ? crypto.randomUUID()
+              : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          url: res.fileUrl,
+          posX: 50,
+          posY: 50,
+        };
+        setG((prev) => ({ ...prev, photos: [...prev.photos, photo] }));
+      } catch (e) {
+        setErr(e instanceof ApiError ? e.message : "Upload failed.");
+      } finally {
+        setUploading(false);
+      }
+    }
+  }
+
+  function removePhoto(id: string) {
+    setG((prev) => ({ ...prev, photos: prev.photos.filter((p) => p.id !== id) }));
+  }
+
+  function reorderPhotos(from: number, to: number) {
+    if (from === to) return;
+    setG((prev) => {
+      const photos = [...prev.photos];
+      const [moved] = photos.splice(from, 1);
+      photos.splice(to, 0, moved);
+      return { ...prev, photos };
+    });
+  }
+
+  return (
+    <div className="bg-white border border-[var(--surface-border)] p-7 flex flex-col gap-5">
+      <div>
+        <SLabel>Gallery</SLabel>
+        <h2 className="font-display text-2xl text-ink">Inside the Hall</h2>
+        <p className="text-xs text-[var(--text-muted)] mt-1">
+          Photos shown in the landing page gallery. Drag a photo to reorder
+          it.
+        </p>
+      </div>
+
+      {g.photos.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {g.photos.map((photo, i) => (
+            <div
+              key={photo.id}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.effectAllowed = "move";
+                setDragId(photo.id);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (dragId !== null && dragId !== photo.id) {
+                  const from = g.photos.findIndex((p) => p.id === dragId);
+                  if (from !== -1) reorderPhotos(from, i);
+                }
+              }}
+              onDragEnd={() => setDragId(null)}
+              className={`relative w-full h-28 cursor-grab active:cursor-grabbing ${
+                dragId === photo.id ? "opacity-40" : ""
+              }`}
+              title="Drag to reorder"
+            >
+              <div className="w-full h-full overflow-hidden border border-[var(--surface-border)] bg-white">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={fileUrl(photo.url)}
+                  alt="Gallery photo"
+                  draggable={false}
+                  className="w-full h-full object-cover pointer-events-none"
+                />
+              </div>
+              <button
+                onClick={() => removePhoto(photo.id)}
+                className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-danger text-white flex items-center justify-center cursor-pointer"
+                aria-label="Remove photo"
+              >
+                <Icon name="close" className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <label className="flex items-center gap-2 border border-dashed border-[var(--field-border)] px-4 py-3 text-xs text-[var(--text-muted)] cursor-pointer hover:border-gold transition-colors w-fit">
+        <Icon name="upload" className="w-4 h-4 text-gold flex-shrink-0" />
+        {uploading ? "Uploading…" : `Upload photos · Max ${MAX_UPLOAD_MB} MB each`}
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files?.length) uploadPhotos(e.target.files);
+            e.target.value = "";
+          }}
+        />
+      </label>
+
+      {msg && <Alert kind="success">{msg}</Alert>}
+      {err && <Alert>{err}</Alert>}
+      <div>
+        <Btn sm disabled={busy} onClick={() => save(() => api.put("/admin/settings/gallery", g))}>
+          Save gallery
         </Btn>
       </div>
     </div>
